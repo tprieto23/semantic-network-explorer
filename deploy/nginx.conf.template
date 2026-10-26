@@ -1,0 +1,28 @@
+# Sirve el dashboard y expone de la API solo el explorador (lectura).
+# La imagen oficial de nginx sustituye ${API_UPSTREAM} al arrancar.
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    location /analysis/explorer/v1/ {
+        limit_except GET POST {
+            deny all;
+        }
+        proxy_pass ${API_UPSTREAM};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 120s;
+    }
+
+    location /assets/ {
+        # Los archivos llevan hash en el nombre: se pueden cachear indefinidamente.
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Cualquier otra ruta (incluidas /documents, /openapi.json, /docs) es el SPA,
+    # nunca la API.
+    location / {
+        try_files $uri /index.html;
+        add_header Cache-Control "no-cache";
+    }
+}

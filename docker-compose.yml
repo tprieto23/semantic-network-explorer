@@ -1,0 +1,12 @@
+# Dashboard + proxy de solo lectura hacia la API que corre en la misma máquina.
+services:
+  web:
+    build: .
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-http://host.docker.internal:8000}
+    extra_hosts:
+      # En macOS/Windows ya existe; en Linux lo crea.
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
