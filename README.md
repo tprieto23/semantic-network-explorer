@@ -8,6 +8,11 @@ repositorio solo filtra, dibuja y compara.
 
 ## Qué permite
 
+- **Resumen** (vista inicial): una frase con el hallazgo principal, la red destacada,
+  «lo esencial» en cuatro frases (entidad más central, principal puente, mayor
+  subida entre períodos y regla más conectada), el líder de cada categoría, los
+  cambios entre períodos y las relaciones más repetidas. Todo se deriva de la
+  respuesta de la API (`src/domain/insights.ts`).
 - **Red**: entidades de las diez categorías enlazadas por coocurrencia en la misma
   oración. El tamaño del nodo corresponde a la métrica elegida y el grosor del link
   a su peso. Al pasar el cursor se ven los vecinos; al hacer clic, el detalle.
@@ -19,15 +24,24 @@ repositorio solo filtra, dibuja y compara.
   4. peso mínimo del link;
   5. top N entidades por centralidad.
 
-  El embudo «Qué se está mostrando» indica cuánto quita cada paso.
-- **Evolución**: compara los períodos 2021–2023 y 2024–2026 con los mismos filtros.
-  Muestra la entidad líder por métrica, las dos redes sobre el mismo mapa de
-  posiciones, el cambio de ranking y las entidades que entran o salen del top.
+  El embudo indica cuánto quita cada paso. «Links visibles» dibuja por defecto los
+  3 links más fuertes de cada entidad para que la red se lea; las métricas siempre
+  se calculan sobre la red completa.
+- **Evolución**: compara los períodos 2000–2020, 2021–2023 y 2024–2026 con los mismos filtros.
+  Muestra la entidad líder por métrica, las tres redes sobre el mismo mapa de
+  posiciones, el cambio de ranking y, por tramo, las entidades que entran, salen o
+  cambian de posición en el top.
 - **Entidades**: una tabla ordenable por cualquier métrica, como alternativa
   accesible al grafo.
 - **Evidencia**: al hacer clic en un link se listan las oraciones que lo respaldan,
   con las menciones resaltadas.
-- Los filtros viven en la URL, así que una vista se comparte copiando el enlace.
+- Los filtros viven en la URL y la vista y la selección en el hash
+  (`#red/<id>`, `#red/<origen>~<destino>`), así que se comparten copiando el enlace.
+- Tema oscuro y claro (botón de la barra superior; recuerda la elección) con la
+  paleta de categorías validada en ambos.
+- Interfaz en español e inglés (botón ES / EN; recuerda la elección, y `?ui=en`
+  abre un enlace ya en inglés). Los textos viven en `src/i18n/messages.ts`; las
+  advertencias que genera la API llegan en español.
 
 ## Requisitos
 
@@ -73,14 +87,16 @@ src/
 ├── api/          cliente HTTP tipado, tipos generados y hooks de TanStack Query
 ├── state/        filtros (Zustand + sincronización con la URL) y selección
 ├── graph/        construcción del grafo Graphology, escalas y layout ForceAtlas2
-├── domain/       vocabulario: colores y etiquetas de categorías, métricas, modos
-└── components/   vistas (Red, Evolución, Entidades), filtros y panel de detalle
+├── domain/       vocabulario (paleta, etiquetas, métricas), hallazgos del resumen y CSV
+└── components/   vistas (Resumen, Red, Evolución, Entidades), filtros y paneles
 ```
 
 Decisiones principales:
 
-- **Sigma.js 4 + Graphology** para renderizar en WebGL miles de nodos; ECharts
-  solo para el gráfico de ranking, cargado bajo demanda.
+- **Sigma.js 4 + Graphology** para renderizar en WebGL miles de nodos. El gráfico
+  de ranking de Evolución es SVG propio: sigue el tema y no suma dependencias.
+- Diseño tomado de «Redes semánticas · Madre de Dios» (Claude Design): tokens en
+  `src/index.css`, tipografía DM Sans y paleta en `src/domain/vocabulary.ts`.
 - **Mapa mental estable**: `LayoutMemory` reutiliza las posiciones entre cambios de
   filtro. En Evolución, ambos períodos se dibujan con las posiciones de la red de
   todo el corpus, así una entidad ocupa el mismo lugar en los dos.

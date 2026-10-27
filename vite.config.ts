@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Sigma + Graphology (WebGL) pesan ~700 kB sin comprimir; ECharts ya se carga aparte.
+    // Sigma + Graphology (WebGL) pesan ~700 kB sin comprimir.
     chunkSizeWarningLimit: 800,
   },
   test: {

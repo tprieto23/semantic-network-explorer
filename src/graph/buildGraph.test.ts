@@ -78,7 +78,7 @@ describe("buildGraph", () => {
     expect(graph.size).toBe(2);
     expect(graph.getNodeAttribute("a", "size")).toBeGreaterThan(graph.getNodeAttribute("c", "size"));
     expect(graph.hasEdge(edgeKey("b", "a"))).toBe(true);
-    expect(graph.getEdgeAttribute(edgeKey("a", "b"), "size")).toBe(5);
+    expect(graph.getEdgeAttribute(edgeKey("a", "b"), "size")).toBe(3.5);
   });
 
   it("keeps fixed positions when layout is disabled", () => {

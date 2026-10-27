@@ -1,15 +1,24 @@
 import { useMemo, useState } from "react";
 import type { CategoryCode, ExplorerMeta, NetworkResponse } from "../api/client";
 import {
-  CATEGORY_FALLBACK_LABELS,
-  EDGE_WEIGHTINGS,
-  LINK_MODES,
+  CATEGORY_ORDER,
   METRIC_ORDER,
-  METRICS,
   categoryColor,
+  categoryLabel,
+  categoryTint,
+  edgeWeightings,
+  formatInt,
+  linkModes,
+  metricInfo,
+  periodShort,
 } from "../domain/vocabulary";
+import { useT } from "../i18n";
 import type { CategoryPair, Filters } from "../state/filters";
-import { useFilterStore } from "../state/filters";
+import { activeFilterCount, useFilterStore } from "../state/filters";
+import { useTheme } from "../state/theme";
+import { useUiStore } from "../state/ui";
+import { ChevronIcon, ResetIcon } from "./icons";
+import { CategoryDot } from "./Legend";
 import { StageFunnel } from "./StageFunnel";
 
 interface FilterPanelProps {
@@ -22,20 +31,26 @@ function samePair(a: CategoryPair, b: CategoryPair) {
 }
 
 export function FilterPanel({ meta, network }: FilterPanelProps) {
+  const { t, lang } = useT();
+  const collapsed = useUiStore((state) => state.filtersCollapsed);
+  const setCollapsed = useUiStore((state) => state.setFiltersCollapsed);
   const filters = useFilterStore((state) => state.filters);
   const update = useFilterStore((state) => state.update);
   const reset = useFilterStore((state) => state.reset);
+  const theme = useTheme();
 
   const categories = useMemo(
-    () => (meta?.categories ?? []).filter((category) => !category.legacy || category.entity_count > 0),
+    () =>
+      (meta?.categories ?? [])
+        .filter((category) => !category.legacy || category.entity_count > 0)
+        .sort((a, b) => CATEGORY_ORDER.indexOf(a.code as never) - CATEGORY_ORDER.indexOf(b.code as never)),
     [meta],
   );
   const allCodes = categories.map((category) => category.code as CategoryCode);
   const selectedCodes: CategoryCode[] = filters.categories.length ? filters.categories : allCodes;
-  const labelFor = (code: string) =>
-    categories.find((category) => category.code === code)?.label ??
-    CATEGORY_FALLBACK_LABELS[code as CategoryCode] ??
-    code;
+  const allSelected = filters.categories.length === 0;
+  const active = activeFilterCount(filters);
+  const activeLabel = active === 1 ? t("filters.activeOne") : t("filters.active", { n: active });
 
   function toggleCategory(code: CategoryCode) {
     const next = selectedCodes.includes(code)
@@ -45,6 +60,197 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
     const pairs = filters.categoryPairs.filter((pair) => next.includes(pair[0]) && next.includes(pair[1]));
     update({ categories: next.length === allCodes.length ? [] : next, categoryPairs: pairs });
   }
+
+  const resetButton = (
+    <button
+      type="button"
+      className="round-btn"
+      aria-label={t("filters.resetShort")}
+      title={t("filters.resetShort")}
+      disabled={active === 0}
+      onClick={reset}
+    >
+      <ResetIcon />
+    </button>
+  );
+
+  // Cerrado, el panel no ocupa espacio: la red muestra un botón flotante para abrirlo.
+  if (collapsed) return null;
+
+  return (
+    <>
+      {/* Solo visible en celular, donde el panel es una hoja sobre la red. */}
+      <div className="sheet-backdrop" aria-hidden onClick={() => setCollapsed(true)} />
+      <aside className="card filters" aria-label={t("filters.title")}>
+        <div className="panel-head">
+          <h2>
+            {t("filters.title")}
+            {active > 0 && <span className="badge num">{active}</span>}
+          </h2>
+          <div className="panel-actions">
+            {resetButton}
+            <button type="button" className="round-btn" aria-label={t("filters.hide")} onClick={() => setCollapsed(true)}>
+              <ChevronIcon />
+            </button>
+          </div>
+        </div>
+        {active > 0 && (
+          <button type="button" className="reset-bar" onClick={reset}>
+            <ResetIcon />
+            {t("filters.resetShort")}
+            <span className="faint">· {activeLabel}</span>
+          </button>
+        )}
+
+        <div className="filters-body">
+          <section className="group">
+            <h3 className="group-title">{t("filters.scope")}</h3>
+            <div className="field">
+              <span className="field-label">{t("filters.period")}</span>
+              <div className="segmented" role="group" aria-label={t("filters.period")}>
+                <button type="button" aria-pressed={filters.period === "all"} onClick={() => update({ period: "all" })}>
+                  {t("filters.allPeriods")}
+                  <span className="count">{meta ? t("common.docs", { n: meta.documents.length }) : "–"}</span>
+                </button>
+                {(meta?.periods ?? []).map((period) => (
+                  <button
+                    key={period.id}
+                    type="button"
+                    aria-pressed={filters.period === period.id}
+                    onClick={() => update({ period: period.id as Filters["period"] })}
+                  >
+                    {periodShort(period.id as Filters["period"], lang)}
+                    <span className="count">{t("common.docs", { n: period.document_count })}</span>
+                  </button>
+                ))}
+              </div>
+              {meta && meta.documents_without_year > 0 && (
+                <p className="help">{t("filters.withoutYear", { n: meta.documents_without_year })}</p>
+              )}
+            </div>
+          </section>
+
+          <section className="group">
+            <div className="group-head">
+              <h3 className="group-title">{t("filters.categories")}</h3>
+              {!allSelected && (
+                <button type="button" className="text-btn" onClick={() => update({ categories: [], categoryPairs: [] })}>
+                  {t("filters.allCategories")}
+                </button>
+              )}
+            </div>
+            <div className="chips" role="group" aria-label={t("filters.categoriesAria")}>
+              {categories.map((category) => {
+                const code = category.code as CategoryCode;
+                const active = selectedCodes.includes(code);
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    className="chip"
+                    aria-pressed={active}
+                    // La definición del codebook solo existe en español.
+                    title={lang === "es" ? (category.definition ?? categoryLabel(code, lang)) : categoryLabel(code, lang)}
+                    onClick={() => toggleCategory(code)}
+                    style={
+                      active
+                        ? { borderColor: categoryColor(code, theme), background: categoryTint(code, theme) }
+                        : undefined
+                    }
+                  >
+                    <CategoryDot category={code} />
+                    {categoryLabel(code, lang, true)}
+                    <span className="count num">{formatInt(category.entity_count, lang)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="group">
+            <h3 className="group-title">{t("filters.importance")}</h3>
+            <div className="field">
+              <label htmlFor="metric">{t("filters.sizeBy")}</label>
+              <select
+                id="metric"
+                className="select"
+                value={filters.metric}
+                onChange={(event) => update({ metric: event.target.value as Filters["metric"] })}
+              >
+                {METRIC_ORDER.map((metric) => (
+                  <option key={metric} value={metric}>
+                    {metricInfo(metric, lang).label} · {metricInfo(metric, lang).hint}
+                  </option>
+                ))}
+              </select>
+              <p className="help">{metricInfo(filters.metric, lang).description}</p>
+            </div>
+            <div className="field">
+              <div className="field-row">
+                <label htmlFor="top-n">{t("filters.showTop")}</label>
+                <strong className="num">{t("filters.top", { n: filters.topN })}</strong>
+              </div>
+              <input
+                id="top-n"
+                type="range"
+                min={10}
+                max={400}
+                step={10}
+                value={filters.topN}
+                onChange={(event) => update({ topN: Number(event.target.value) })}
+              />
+            </div>
+            <div className="field">
+              <span className="field-label">{t("filters.visibleLinks")}</span>
+              <div className="segmented" role="group" aria-label={t("filters.visibleLinks")}>
+                <button
+                  type="button"
+                  aria-pressed={filters.edgeDisplay === "strongest"}
+                  onClick={() => update({ edgeDisplay: "strongest" })}
+                >
+                  {t("filters.strongest")}
+                </button>
+                <button type="button" aria-pressed={filters.edgeDisplay === "all"} onClick={() => update({ edgeDisplay: "all" })}>
+                  {t("filters.allLinks")}
+                </button>
+              </div>
+              <p className="help">
+                {filters.edgeDisplay === "strongest" ? t("filters.strongestHelp") : t("filters.allHelp")}
+              </p>
+            </div>
+          </section>
+
+          <details className="disclosure" open={filters.linkMode !== "any" || undefined}>
+            <summary>{t("filters.advanced")}</summary>
+            <div className="disclosure-body">
+              <AdvancedFilters meta={meta} filters={filters} update={update} selectedCodes={selectedCodes} />
+            </div>
+          </details>
+
+          {network && (
+            <StageFunnel stages={network.stages} minDocuments={filters.minDocuments} minWeight={filters.minWeight} />
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+interface AdvancedFiltersProps {
+  meta: ExplorerMeta | undefined;
+  filters: Filters;
+  update: (patch: Partial<Filters>) => void;
+  selectedCodes: CategoryCode[];
+}
+
+function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFiltersProps) {
+  const { t, lang } = useT();
+  const [docQuery, setDocQuery] = useState("");
+  const [showDocs, setShowDocs] = useState(filters.documentIds.length > 0);
+  const documents = (meta?.documents ?? []).filter((document) =>
+    document.name.toLowerCase().includes(docQuery.trim().toLowerCase()),
+  );
+  const weightings = edgeWeightings(lang);
 
   const possiblePairs = useMemo(() => {
     const pairs: CategoryPair[] = [];
@@ -61,171 +267,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
     });
   }
 
-  return (
-    <aside className="sidebar" aria-label="Filtros">
-      <ScopeSection meta={meta} filters={filters} update={update} />
-
-      <section className="section">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <h2 className="section-title">Categorías</h2>
-          <button type="button" className="link-button" onClick={() => update({ categories: [], categoryPairs: [] })}>
-            Todas
-          </button>
-        </div>
-        <div className="chips" role="group" aria-label="Categorías de nodos">
-          {categories.map((category) => {
-            const code = category.code as CategoryCode;
-            return (
-              <button
-                key={code}
-                type="button"
-                className="chip"
-                aria-pressed={selectedCodes.includes(code)}
-                title={category.definition ?? undefined}
-                onClick={() => toggleCategory(code)}
-              >
-                <span className="dot" style={{ background: categoryColor(code) }} />
-                {category.label}
-                {category.legacy && " ·legado"}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Tipo de link</h2>
-        <div className="radio-list" role="radiogroup" aria-label="Tipo de link">
-          {Object.entries(LINK_MODES).map(([mode, info]) => (
-            <label key={mode}>
-              <input
-                type="radio"
-                name="link-mode"
-                checked={filters.linkMode === mode}
-                onChange={() => update({ linkMode: mode as Filters["linkMode"] })}
-              />
-              <span>
-                {info.label}
-                <span className="hint">{info.description}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        {filters.linkMode === "pairs" && (
-          <div className="chips" style={{ marginTop: 10 }} role="group" aria-label="Pares de categorías">
-            {possiblePairs.map((pair) => (
-              <button
-                key={pair.join("-")}
-                type="button"
-                className="chip"
-                aria-pressed={filters.categoryPairs.some((item) => samePair(item, pair))}
-                onClick={() => togglePair(pair)}
-              >
-                <span className="dot" style={{ background: categoryColor(pair[0]) }} />
-                {pair[0] === pair[1] ? labelFor(pair[0]) : `${labelFor(pair[0])} ↔ ${labelFor(pair[1])}`}
-                <span className="dot" style={{ background: categoryColor(pair[1]) }} />
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Importancia y legibilidad</h2>
-        <div className="field">
-          <label htmlFor="min-docs">Aparece en al menos {filters.minDocuments} documento(s)</label>
-          <input
-            id="min-docs"
-            type="range"
-            min={1}
-            max={Math.max(5, Math.min(12, meta?.documents.length ?? 5))}
-            value={filters.minDocuments}
-            onChange={(event) => update({ minDocuments: Number(event.target.value) })}
-          />
-          <span className="hint">Recurrencia documental: deja fuera lo que solo menciona un documento.</span>
-        </div>
-        <div className="field">
-          <label htmlFor="metric">Ordenar y dimensionar por</label>
-          <select
-            id="metric"
-            value={filters.metric}
-            onChange={(event) => update({ metric: event.target.value as Filters["metric"] })}
-          >
-            {METRIC_ORDER.map((metric) => (
-              <option key={metric} value={metric}>
-                {METRICS[metric].label}
-              </option>
-            ))}
-          </select>
-          <span className="hint">{METRICS[filters.metric].description}</span>
-        </div>
-        <div className="field">
-          <label htmlFor="top-n">Mostrar las {filters.topN} entidades más centrales</label>
-          <input
-            id="top-n"
-            type="range"
-            min={10}
-            max={500}
-            step={10}
-            value={filters.topN}
-            onChange={(event) => update({ topN: Number(event.target.value) })}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="weighting">Peso de los links</label>
-          <select
-            id="weighting"
-            value={filters.weighting}
-            onChange={(event) => update({ weighting: event.target.value as Filters["weighting"] })}
-          >
-            {Object.entries(EDGE_WEIGHTINGS).map(([value, info]) => (
-              <option key={value} value={value}>
-                {info.label}
-              </option>
-            ))}
-          </select>
-          <span className="hint">{EDGE_WEIGHTINGS[filters.weighting].description}</span>
-        </div>
-        <div className="field">
-          <label htmlFor="min-weight">Peso mínimo del link</label>
-          <input
-            id="min-weight"
-            type="number"
-            min={0}
-            step={filters.weighting.startsWith("fractional") ? 0.1 : 1}
-            value={filters.minWeight}
-            onChange={(event) => update({ minWeight: Math.max(0, Number(event.target.value) || 0) })}
-          />
-        </div>
-      </section>
-
-      {network && (
-        <section className="section">
-          <h2 className="section-title">Qué se está mostrando</h2>
-          <StageFunnel stages={network.stages} />
-        </section>
-      )}
-
-      <button type="button" className="link-button" onClick={reset}>
-        Restablecer filtros
-      </button>
-    </aside>
-  );
-}
-
-interface ScopeSectionProps {
-  meta: ExplorerMeta | undefined;
-  filters: Filters;
-  update: (patch: Partial<Filters>) => void;
-}
-
-function ScopeSection({ meta, filters, update }: ScopeSectionProps) {
-  const [docQuery, setDocQuery] = useState("");
-  const [showDocs, setShowDocs] = useState(filters.documentIds.length > 0);
-  const documents = (meta?.documents ?? []).filter((document) =>
-    document.name.toLowerCase().includes(docQuery.trim().toLowerCase()),
-  );
-
   function toggleDocument(id: string) {
     const selected = filters.documentIds.includes(id)
       ? filters.documentIds.filter((item) => item !== id)
@@ -234,60 +275,31 @@ function ScopeSection({ meta, filters, update }: ScopeSectionProps) {
   }
 
   return (
-    <section className="section">
-      <h2 className="section-title">Alcance</h2>
+    <>
       <div className="field">
-        <label htmlFor="sector">Sector productivo</label>
+        <label htmlFor="sector">{t("filters.sector")}</label>
         <select
           id="sector"
+          className="select"
           value={filters.sector}
           onChange={(event) => update({ sector: event.target.value as Filters["sector"], documentIds: [] })}
         >
-          <option value="Agroforestry">Agroforestería</option>
-          <option value="all">Todos (incluye documentos sin sector)</option>
+          <option value="Agroforestry">{t("filters.sectorAgro")}</option>
+          <option value="all">{t("filters.sectorAll")}</option>
         </select>
-        {meta && meta.documents_excluded_by_sector > 0 && (
-          <span className="hint">
-            {meta.documents_excluded_by_sector} documento(s) listos quedan fuera por no tener este sector.
-          </span>
-        )}
-      </div>
-      <div className="field">
-        <span className="label">Período</span>
-        <div className="segmented" role="group" aria-label="Período">
-          <button type="button" aria-pressed={filters.period === "all"} onClick={() => update({ period: "all" })}>
-            Todos
-            <span className="count">{meta?.documents.length ?? "–"} docs</span>
-          </button>
-          {(meta?.periods ?? []).map((period) => (
-            <button
-              key={period.id}
-              type="button"
-              aria-pressed={filters.period === period.id}
-              onClick={() => update({ period: period.id as Filters["period"] })}
-            >
-              {period.label}
-              <span className="count">{period.document_count} docs</span>
-            </button>
-          ))}
-        </div>
-        {meta && meta.documents_without_year > 0 && (
-          <span className="hint">
-            {meta.documents_without_year} documento(s) sin año: solo aparecen en «Todos».
-          </span>
-        )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div className="field">
-          <label htmlFor="incubator">Incubadora</label>
+          <label htmlFor="incubator">{t("filters.incubator")}</label>
           <select
             id="incubator"
+            className="select"
             value={String(filters.incubator)}
             onChange={(event) =>
               update({ incubator: event.target.value === "all" ? "all" : Number(event.target.value) })
             }
           >
-            <option value="all">Todas</option>
+            <option value="all">{t("filters.allIncubators")}</option>
             {(meta?.incubators ?? []).map((incubator) => (
               <option key={incubator} value={incubator}>
                 {incubator}
@@ -296,9 +308,14 @@ function ScopeSection({ meta, filters, update }: ScopeSectionProps) {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="language">Idioma</label>
-          <select id="language" value={filters.language} onChange={(event) => update({ language: event.target.value })}>
-            <option value="all">Todos</option>
+          <label htmlFor="language">{t("filters.language")}</label>
+          <select
+            id="language"
+            className="select"
+            value={filters.language}
+            onChange={(event) => update({ language: event.target.value })}
+          >
+            <option value="all">{t("filters.allLanguages")}</option>
             {(meta?.languages ?? []).map((language) => (
               <option key={language} value={language}>
                 {language}
@@ -307,22 +324,24 @@ function ScopeSection({ meta, filters, update }: ScopeSectionProps) {
           </select>
         </div>
       </div>
+
       <div className="field">
-        <button type="button" className="link-button" style={{ textAlign: "left" }} onClick={() => setShowDocs(!showDocs)}>
-          {showDocs ? "▾" : "▸"} Documentos{" "}
-          {filters.documentIds.length ? `(${filters.documentIds.length} seleccionados)` : "(todos)"}
+        <button type="button" className="text-btn" style={{ textAlign: "left" }} onClick={() => setShowDocs(!showDocs)}>
+          {showDocs ? "▾" : "▸"} {t("filters.documents")}{" "}
+          {filters.documentIds.length ? t("filters.docsSelected", { n: filters.documentIds.length }) : t("filters.docsAll")}
         </button>
         {showDocs && (
           <>
             <input
+              className="input"
               type="search"
-              placeholder="Buscar documento"
+              placeholder={t("filters.searchDocument")}
               value={docQuery}
               onChange={(event) => setDocQuery(event.target.value)}
             />
-            <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div className="doc-list">
               {documents.map((document) => (
-                <label key={document.id} style={{ display: "flex", gap: 6, fontWeight: 400, fontSize: 12 }}>
+                <label key={document.id}>
                   <input
                     type="checkbox"
                     checked={filters.documentIds.includes(document.id)}
@@ -330,19 +349,103 @@ function ScopeSection({ meta, filters, update }: ScopeSectionProps) {
                   />
                   <span>
                     {document.name}
-                    <span className="hint"> · {document.year ?? "sin año"}</span>
+                    <span className="faint"> · {document.year ?? t("common.noYear")}</span>
                   </span>
                 </label>
               ))}
             </div>
             {filters.documentIds.length > 0 && (
-              <button type="button" className="link-button" onClick={() => update({ documentIds: [] })}>
-                Usar todos los documentos
+              <button type="button" className="text-btn" onClick={() => update({ documentIds: [] })}>
+                {t("filters.useAllDocuments")}
               </button>
             )}
           </>
         )}
       </div>
-    </section>
+
+      <div className="field">
+        <span className="field-label">{t("filters.linkType")}</span>
+        <div className="radio-list" role="radiogroup" aria-label={t("filters.linkType")}>
+          {Object.entries(linkModes(lang)).map(([mode, info]) => (
+            <label key={mode} title={info.description}>
+              <input
+                type="radio"
+                name="link-mode"
+                checked={filters.linkMode === mode}
+                onChange={() => update({ linkMode: mode as Filters["linkMode"] })}
+              />
+              <span>{info.label}</span>
+            </label>
+          ))}
+        </div>
+        {filters.linkMode === "pairs" && (
+          <div className="chips" role="group" aria-label={t("filters.pairsAria")}>
+            {possiblePairs.map((pair) => (
+              <button
+                key={pair.join("-")}
+                type="button"
+                className="chip"
+                aria-pressed={filters.categoryPairs.some((item) => samePair(item, pair))}
+                onClick={() => togglePair(pair)}
+              >
+                <CategoryDot category={pair[0]} />
+                {pair[0] === pair[1]
+                  ? categoryLabel(pair[0], lang, true)
+                  : `${categoryLabel(pair[0], lang, true)} ↔ ${categoryLabel(pair[1], lang, true)}`}
+                {pair[0] !== pair[1] && <CategoryDot category={pair[1]} />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="field">
+        <div className="field-row">
+          <label htmlFor="min-docs">{t("filters.minRecurrence")}</label>
+          <strong className="num">{t("filters.recurrenceValue", { n: filters.minDocuments })}</strong>
+        </div>
+        <input
+          id="min-docs"
+          type="range"
+          min={1}
+          max={Math.max(5, Math.min(12, meta?.documents.length ?? 5))}
+          value={filters.minDocuments}
+          onChange={(event) => update({ minDocuments: Number(event.target.value) })}
+        />
+        <p className="help">
+          {t("filters.recurrenceHelp")}
+          {filters.minDocuments === 1 && t("filters.recurrenceSlow")}
+        </p>
+      </div>
+
+      <div className="field">
+        <label htmlFor="weighting">{t("filters.weighting")}</label>
+        <select
+          id="weighting"
+          className="select"
+          value={filters.weighting}
+          onChange={(event) => update({ weighting: event.target.value as Filters["weighting"] })}
+        >
+          {Object.entries(weightings).map(([value, info]) => (
+            <option key={value} value={value}>
+              {info.label}
+            </option>
+          ))}
+        </select>
+        <p className="help">{weightings[filters.weighting].description}</p>
+      </div>
+      <div className="field">
+        <label htmlFor="min-weight">{t("filters.minWeight")}</label>
+        <input
+          id="min-weight"
+          className="input"
+          type="number"
+          min={0}
+          step={filters.weighting.startsWith("fractional") ? 0.1 : 1}
+          value={filters.minWeight}
+          onChange={(event) => update({ minWeight: Math.max(0, Number(event.target.value) || 0) })}
+        />
+      </div>
+    </>
   );
 }

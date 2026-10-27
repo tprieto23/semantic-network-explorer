@@ -1,11 +1,24 @@
 import { useMemo, useState } from "react";
 import type { NetworkResponse, RankingMetric } from "../api/client";
-import { CATEGORY_FALLBACK_LABELS, METRIC_ORDER, METRICS, formatMetric } from "../domain/vocabulary";
+import { toCsv } from "../domain/csv";
+import { METRIC_ORDER, categoryLabel, formatInt, formatMetric, metricInfo, metricLabel } from "../domain/vocabulary";
+import { useT } from "../i18n";
 import { useSelectionStore } from "../state/selection";
-import { EntityRef } from "./Legend";
+import { CategoryDot } from "./Legend";
+
+function download(filename: string, content: string) {
+  // El BOM permite que Excel reconozca la codificación UTF-8 (tildes y eñes).
+  const url = URL.createObjectURL(new Blob([`﻿${content}`], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /** Alternativa accesible al grafo: las mismas entidades, ordenables por cualquier métrica. */
 export function EntityTable({ network, metric }: { network: NetworkResponse | undefined; metric: RankingMetric }) {
+  const { t, lang } = useT();
   const [sortBy, setSortBy] = useState<RankingMetric>(metric);
   const [query, setQuery] = useState("");
   const selection = useSelectionStore((state) => state.selection);
@@ -19,57 +32,72 @@ export function EntityTable({ network, metric }: { network: NetworkResponse | un
   }, [network, query, sortBy]);
 
   return (
-    <div className="table-view">
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+    <section className="card table-card" aria-label={t("table.aria")}>
+      <div className="table-tools">
         <input
+          className="input"
           type="search"
-          placeholder="Buscar entidad"
+          placeholder={t("table.search")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          style={{ maxWidth: 320 }}
         />
-        <span className="hint">
-          {rows.length} entidades en pantalla de {network?.stages.edge_weight.nodes ?? 0} que superan los filtros. El
-          rango (#) se calcula sobre todas.
+        <span className="count">
+          <strong className="num">{formatInt(rows.length, lang)}</strong>{" "}
+          {t("table.count", { t: formatInt(network?.stages.edge_weight.nodes ?? 0, lang) })}{" "}
+          <strong>{metricLabel(sortBy, lang)}</strong>
         </span>
+        <button
+          type="button"
+          className="btn"
+          disabled={!rows.length}
+          onClick={() => download(`${t("table.filename")}-${sortBy}.csv`, toCsv(rows))}
+        >
+          {t("table.export")}
+        </button>
       </div>
-      <table className="entity-table">
-        <thead>
-          <tr>
-            <th>Entidad</th>
-            <th>Categoría</th>
-            {METRIC_ORDER.map((item) => (
-              <th key={item} className="num" aria-sort={sortBy === item ? "descending" : "none"}>
-                <button type="button" onClick={() => setSortBy(item)} title={METRICS[item].description}>
-                  {METRICS[item].short} {sortBy === item ? "▾" : ""}
-                </button>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((node) => (
-            <tr
-              key={node.id}
-              className={selection?.kind === "node" && selection.id === node.id ? "selected" : undefined}
-              onClick={() => select({ kind: "node", id: node.id })}
-              style={{ cursor: "pointer" }}
-            >
-              <td>
-                <EntityRef name={node.name} category={node.category} />
-              </td>
-              <td className="hint">
-                {CATEGORY_FALLBACK_LABELS[node.category as keyof typeof CATEGORY_FALLBACK_LABELS] ?? node.category}
-              </td>
+      <div className="table-scroll">
+        <table className="entity-table">
+          <thead>
+            <tr>
+              <th>{t("table.entity")}</th>
+              <th>{t("table.category")}</th>
+              <th className="num">{t("table.mentions")}</th>
               {METRIC_ORDER.map((item) => (
-                <td key={item} className="num">
-                  {formatMetric(item, node.metrics[item])} <span className="rank">#{node.ranks[item]}</span>
-                </td>
+                <th key={item} className="num" aria-sort={sortBy === item ? "descending" : "none"}>
+                  <button type="button" onClick={() => setSortBy(item)} title={metricInfo(item, lang).description}>
+                    {metricLabel(item, lang)}
+                    {sortBy === item ? " ↓" : ""}
+                  </button>
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((node) => (
+              <tr
+                key={node.id}
+                className={selection?.kind === "node" && selection.id === node.id ? "selected" : undefined}
+                onClick={() => select({ kind: "node", id: node.id })}
+              >
+                <td className="name">{node.name}</td>
+                <td>
+                  <span className="cat">
+                    <CategoryDot category={node.category} />
+                    {categoryLabel(node.category, lang)}
+                  </span>
+                </td>
+                <td className="num">{formatInt(node.mention_count, lang)}</td>
+                {METRIC_ORDER.map((item) => (
+                  <td key={item} className={`num${sortBy === item ? " sorted" : ""}`}>
+                    {formatMetric(item, node.metrics[item], lang)}
+                    <span className="rank">#{node.ranks[item]}</span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { MessageKey } from "../i18n";
 import type {
   CategoryCode,
   CompareRequest,
@@ -12,6 +13,9 @@ import type {
 export type CategoryPair = [CategoryCode, CategoryCode];
 
 export type SectorFilter = "Agroforestry" | "all";
+
+/** Qué links se dibujan; no cambia lo que se calcula en la API. */
+export type EdgeDisplay = "strongest" | "all";
 
 export interface Filters {
   /** Por defecto solo Agroforestry; "all" incluye documentos sin sector. */
@@ -30,6 +34,7 @@ export interface Filters {
   minWeight: number;
   metric: RankingMetric;
   topN: number;
+  edgeDisplay: EdgeDisplay;
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -46,10 +51,14 @@ export const DEFAULT_FILTERS: Filters = {
   minWeight: 0,
   metric: "pagerank",
   topN: 150,
+  edgeDisplay: "strongest",
 };
 
 const SECTORS: SectorFilter[] = ["Agroforestry", "all"];
-const PERIODS: PeriodId[] = ["all", "2021-2023", "2024-2026"];
+const PERIODS: PeriodId[] = ["all", "2000-2020", "2021-2023", "2024-2026"];
+
+/** Períodos que compara la vista de evolución, en orden cronológico. */
+export const COMPARED_PERIODS = ["2000-2020", "2021-2023", "2024-2026"] as const;
 const LINK_MODES: LinkMode[] = ["any", "between", "within", "pairs"];
 const WEIGHTINGS: EdgeWeighting[] = ["fractional-document", "fractional", "sentence-count", "document-count"];
 const METRICS: RankingMetric[] = ["pagerank", "degree", "strength", "betweenness", "closeness", "document_count"];
@@ -94,6 +103,7 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.minWeight !== DEFAULT_FILTERS.minWeight) params.set("minw", String(filters.minWeight));
   if (filters.metric !== DEFAULT_FILTERS.metric) params.set("metric", filters.metric);
   if (filters.topN !== DEFAULT_FILTERS.topN) params.set("top", String(filters.topN));
+  if (filters.edgeDisplay !== DEFAULT_FILTERS.edgeDisplay) params.set("vis", filters.edgeDisplay);
   const search = params.toString();
   return search ? `?${search}` : "";
 }
@@ -128,6 +138,7 @@ export function filtersFromSearch(search: string): Filters {
     minWeight: Number.isFinite(minWeight) && minWeight >= 0 ? minWeight : DEFAULT_FILTERS.minWeight,
     metric: oneOf(params.get("metric"), METRICS, DEFAULT_FILTERS.metric),
     topN: positiveInt(params.get("top"), DEFAULT_FILTERS.topN, 5000),
+    edgeDisplay: oneOf(params.get("vis"), ["strongest", "all"] as const, DEFAULT_FILTERS.edgeDisplay),
   };
 }
 
@@ -152,19 +163,24 @@ export function toNetworkRequest(filters: Filters, period: PeriodId = filters.pe
 }
 
 export function toCompareRequest(filters: Filters, topK = 15): CompareRequest {
-  return { ...sharedRequest(filters), periods: ["2021-2023", "2024-2026"], top_k: topK };
+  return { ...sharedRequest(filters), periods: [...COMPARED_PERIODS], top_k: topK };
 }
 
-/** Problemas que se pueden detectar antes de llamar a la API. */
-export function filterIssues(filters: Filters, availableCategories: number): string[] {
-  const issues: string[] = [];
+/** Cuántos filtros difieren de sus valores por defecto (cada lista cuenta como uno). */
+export function activeFilterCount(filters: Filters): number {
+  return (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => {
+    const value = filters[key];
+    const fallback = DEFAULT_FILTERS[key];
+    return Array.isArray(value) ? value.length > 0 : value !== fallback;
+  }).length;
+}
+
+/** Problemas que se pueden detectar antes de llamar a la API, como claves de texto. */
+export function filterIssues(filters: Filters, availableCategories: number): MessageKey[] {
+  const issues: MessageKey[] = [];
   const selected = filters.categories.length || availableCategories;
-  if (filters.linkMode === "between" && selected < 2) {
-    issues.push("«Solo entre categorías» necesita al menos dos categorías.");
-  }
-  if (filters.linkMode === "pairs" && filters.categoryPairs.length === 0) {
-    issues.push("Elige al menos un par de categorías.");
-  }
+  if (filters.linkMode === "between" && selected < 2) issues.push("filters.issueBetween");
+  if (filters.linkMode === "pairs" && filters.categoryPairs.length === 0) issues.push("filters.issuePairs");
   return issues;
 }
 

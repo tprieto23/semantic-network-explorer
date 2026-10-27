@@ -1,32 +1,45 @@
 import type { ExplorerStages } from "../api/client";
+import { formatInt, formatWeight } from "../domain/vocabulary";
+import { useT } from "../i18n";
 
-const STAGES: { key: keyof Pick<ExplorerStages, "cooccurrence" | "document_recurrence" | "edge_weight" | "shown">; label: string }[] = [
-  { key: "cooccurrence", label: "Coocurrencia por oración" },
-  { key: "document_recurrence", label: "Tras recurrencia documental" },
-  { key: "edge_weight", label: "Tras peso mínimo" },
-  { key: "shown", label: "En pantalla (top por centralidad)" },
-];
+interface StageFunnelProps {
+  stages: ExplorerStages;
+  minDocuments: number;
+  minWeight: number;
+}
 
 /** Muestra cuánto quita cada filtro, para que la reducción de ruido sea transparente. */
-export function StageFunnel({ stages }: { stages: ExplorerStages }) {
+export function StageFunnel({ stages, minDocuments, minWeight }: StageFunnelProps) {
+  const { t, lang } = useT();
+  const rows = [
+    { label: t("funnel.categories"), count: stages.cooccurrence },
+    { label: t("funnel.recurrence", { n: minDocuments }), count: stages.document_recurrence },
+    {
+      label: minWeight > 0 ? t("funnel.weight", { w: formatWeight(minWeight, lang) }) : t("funnel.withLink"),
+      count: stages.edge_weight,
+    },
+    { label: t("funnel.shown"), count: stages.shown },
+  ];
   const total = Math.max(stages.cooccurrence.nodes, 1);
   return (
     <div className="funnel">
-      {STAGES.map(({ key, label }) => {
-        const count = stages[key];
-        return (
-          <div className="funnel-row" key={key}>
+      <h3 className="group-title">{t("funnel.title")}</h3>
+      {rows.map(({ label, count }) => (
+        <div className="funnel-row" key={label}>
+          <div className="field-row">
             <span>{label}</span>
-            <span className="hint">
-              {count.nodes} entidades · {count.edges} links
+            <span className="num" style={{ color: "var(--tx)" }}>
+              {formatInt(count.nodes, lang)}
             </span>
-            <div className="funnel-bar" aria-hidden>
-              <span style={{ width: `${(count.nodes / total) * 100}%` }} />
-            </div>
           </div>
-        );
-      })}
-      <span className="hint">{stages.mentions} menciones en el alcance</span>
+          <div className="bar" aria-hidden>
+            <span style={{ width: `${Math.max(1.5, (count.nodes / total) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
+      <p className="help">
+        {t("funnel.footer", { m: formatInt(stages.mentions, lang), e: formatInt(stages.shown.edges, lang) })}
+      </p>
     </div>
   );
 }

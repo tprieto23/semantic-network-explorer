@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FILTERS,
+  activeFilterCount,
   filterIssues,
   filtersFromSearch,
   filtersToSearch,
@@ -32,6 +33,7 @@ describe("URL serialization", () => {
       minWeight: 1.5,
       metric: "betweenness",
       topN: 80,
+      edgeDisplay: "all",
     };
 
     expect(filtersFromSearch(filtersToSearch(filters))).toEqual(filters);
@@ -64,7 +66,7 @@ describe("API requests", () => {
   it("builds compare requests for both periods without top_n", () => {
     const request = toCompareRequest(DEFAULT_FILTERS, 10);
 
-    expect(request.periods).toEqual(["2021-2023", "2024-2026"]);
+    expect(request.periods).toEqual(["2000-2020", "2021-2023", "2024-2026"]);
     expect(request.top_k).toBe(10);
     expect("top_n" in request).toBe(false);
   });
@@ -75,5 +77,15 @@ describe("filterIssues", () => {
     expect(filterIssues({ ...DEFAULT_FILTERS, linkMode: "between", categories: ["CHAR"] }, 10)).toHaveLength(1);
     expect(filterIssues({ ...DEFAULT_FILTERS, linkMode: "pairs" }, 10)).toHaveLength(1);
     expect(filterIssues(DEFAULT_FILTERS, 10)).toEqual([]);
+  });
+});
+
+describe("activeFilterCount", () => {
+  it("counts only the filters that differ from the defaults", () => {
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(
+      activeFilterCount({ ...DEFAULT_FILTERS, period: "2021-2023", categories: ["CHAR", "PRAC"], topN: 60 }),
+    ).toBe(3);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, categoryPairs: [] })).toBe(0);
   });
 });

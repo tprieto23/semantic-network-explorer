@@ -34,8 +34,8 @@ export type ExplorerGraph = Graph<NodeAttributes, EdgeAttributes>;
 
 const MIN_NODE_SIZE = 4;
 const MAX_NODE_SIZE = 22;
-const MIN_EDGE_SIZE = 0.5;
-const MAX_EDGE_SIZE = 5;
+const MIN_EDGE_SIZE = 0.4;
+const MAX_EDGE_SIZE = 3.5;
 
 export function edgeKey(source: string, target: string): string {
   return source < target ? `${source}|${target}` : `${target}|${source}`;
@@ -124,7 +124,8 @@ export function buildGraph(network: NetworkResponse, options: BuildOptions): Exp
       x: point.x,
       y: point.y,
       size: scaleNodeSize(node.metrics[metric], minValue, maxValue),
-      color: categoryColor(node.category),
+      // El canvas recolorea según el tema; este es el color de respaldo.
+      color: categoryColor(node.category, "oscuro"),
       label: node.name,
       category: node.category,
       metricValue: node.metrics[metric],
@@ -135,7 +136,7 @@ export function buildGraph(network: NetworkResponse, options: BuildOptions): Exp
     if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) continue;
     graph.addEdgeWithKey(edgeKey(edge.source, edge.target), edge.source, edge.target, {
       size: scaleEdgeSize(edge.weight, minWeight, maxWeight),
-      color: "rgba(128, 128, 148, 0.32)",
+      color: "#3a433f",
       weight: edge.weight,
       sentenceCount: edge.sentence_count,
       documentCount: edge.document_count,

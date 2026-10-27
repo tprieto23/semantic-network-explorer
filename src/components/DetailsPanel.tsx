@@ -1,11 +1,24 @@
-import { Fragment, useMemo, type ReactNode } from "react";
-import type { EvidenceParams, ExplorerNode, NetworkResponse } from "../api/client";
+import { useMemo } from "react";
+import type { EvidenceParams, EvidenceResponse, ExplorerNode, NetworkResponse } from "../api/client";
 import { useCompare, useEvidence } from "../api/queries";
-import { CATEGORY_FALLBACK_LABELS, METRIC_ORDER, METRICS, categoryColor, formatMetric } from "../domain/vocabulary";
+import {
+  METRIC_ORDER,
+  categoryColor,
+  categoryLabel,
+  categoryTint,
+  formatInt,
+  formatMetric,
+  formatWeight,
+  metricInfo,
+  metricLabel,
+} from "../domain/vocabulary";
+import { errorText, useT } from "../i18n";
 import type { Filters } from "../state/filters";
 import { useFilterStore } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
-import { EntityRef } from "./Legend";
+import type { Theme } from "../state/theme";
+import { useTheme } from "../state/theme";
+import { CategoryDot } from "./Legend";
 
 interface DetailsPanelProps {
   network: NetworkResponse | undefined;
@@ -20,48 +33,56 @@ export function DetailsPanel({ network, filters }: DetailsPanelProps) {
 
   if (!selection || !network) return null;
 
+  let content;
+  if (selection.kind === "edge" && nodesById.has(selection.source) && nodesById.has(selection.target)) {
+    content = (
+      <EdgeDetails
+        source={nodesById.get(selection.source)!}
+        target={nodesById.get(selection.target)!}
+        network={network}
+        filters={filters}
+      />
+    );
+  } else if (selection.kind === "node" && nodesById.has(selection.id)) {
+    content = <NodeDetails node={nodesById.get(selection.id)!} network={network} filters={filters} />;
+  } else {
+    content = <GoneDetails onClose={() => select(null)} />;
+  }
   return (
-    <aside className="details" aria-label="Detalle">
-      {selection.kind === "node" && nodesById.has(selection.id) && (
-        <NodeDetails node={nodesById.get(selection.id)!} network={network} filters={filters} />
-      )}
-      {selection.kind === "edge" && nodesById.has(selection.source) && nodesById.has(selection.target) && (
-        <EdgeDetails
-          source={nodesById.get(selection.source)!}
-          target={nodesById.get(selection.target)!}
-          network={network}
-          filters={filters}
-        />
-      )}
-      {selection.kind === "node" && !nodesById.has(selection.id) && (
-        <div className="details-header">
-          <p className="hint">La entidad seleccionada ya no está en la red filtrada.</p>
-          <button type="button" className="close-button" aria-label="Cerrar" onClick={() => select(null)}>
+    <>
+      {/* Solo visible en celular, donde el detalle es una hoja sobre la red. */}
+      <div className="sheet-backdrop" aria-hidden onClick={() => select(null)} />
+      {content}
+    </>
+  );
+}
+
+function GoneDetails({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
+  return (
+    <aside className="card details" aria-label={t("details.aria")}>
+      <div className="details-head">
+        <div className="top">
+          <p className="muted" style={{ margin: 0 }}>
+            {t("details.gone")}
+          </p>
+          <button type="button" className="close" aria-label={t("common.close")} onClick={onClose}>
             ×
           </button>
         </div>
-      )}
+      </div>
     </aside>
   );
 }
 
-function Header({ title, subtitle }: { title: ReactNode; subtitle: ReactNode }) {
-  const select = useSelectionStore((state) => state.select);
-  return (
-    <div className="details-header">
-      <div>
-        <span className="badge">{subtitle}</span>
-        <h2>{title}</h2>
-      </div>
-      <button type="button" className="close-button" aria-label="Cerrar detalle" onClick={() => select(null)}>
-        ×
-      </button>
-    </div>
-  );
-}
-
 function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: NetworkResponse; filters: Filters }) {
+  const { t, lang } = useT();
   const select = useSelectionStore((state) => state.select);
+  const tab = useSelectionStore((state) => state.tab);
+  const setTab = useSelectionStore((state) => state.setTab);
+  const neighborsOnly = useSelectionStore((state) => state.neighborsOnly);
+  const setNeighborsOnly = useSelectionStore((state) => state.setNeighborsOnly);
+  const requestFocus = useSelectionStore((state) => state.requestFocus);
   const update = useFilterStore((state) => state.update);
   const total = network.stages.edge_weight.nodes;
   const compare = useCompare(filters, 200);
@@ -72,94 +93,181 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
     return network.edges
       .filter((edge) => edge.source === node.id || edge.target === node.id)
       .map((edge) => ({ edge, other: byId.get(edge.source === node.id ? edge.target : edge.source)! }))
-      .sort((a, b) => b.edge.weight - a.edge.weight);
+      .sort((a, b) => b.edge.sentence_count - a.edge.sentence_count || b.edge.weight - a.edge.weight);
   }, [network, node.id]);
+  const maxSentences = Math.max(1, ...neighbors.map(({ edge }) => edge.sentence_count));
+
+  function centerOnGraph() {
+    if (tab !== "network") setTab("network");
+    requestFocus(node.id);
+  }
+
+  const points = trajectory?.points ?? [];
+  const previous = points[points.length - 2];
+  const last = points[points.length - 1];
+  // Cambio en el tramo más reciente, como en el resto de la interfaz.
+  const delta = previous?.rank != null && last?.rank != null ? previous.rank - last.rank : null;
 
   return (
-    <>
-      <Header
-        title={node.name}
-        subtitle={
-          <>
-            <span className="dot" style={{ background: categoryColor(node.category) }} />
-            {CATEGORY_FALLBACK_LABELS[node.category as keyof typeof CATEGORY_FALLBACK_LABELS] ?? node.category}
-          </>
-        }
-      />
-      <p className="hint">
-        {node.mention_count} menciones en {node.sentence_count} oraciones de {node.metrics.document_count} documento(s).
-      </p>
+    <aside className="card details" aria-label={t("details.ariaOf", { name: node.name })}>
+      <div className="details-head">
+        <div className="top">
+          <h2>{node.name}</h2>
+          <button type="button" className="close" aria-label={t("common.close")} onClick={() => select(null)}>
+            ×
+          </button>
+        </div>
+        <span className="tag">
+          <CategoryDot category={node.category} />
+          {categoryLabel(node.category, lang)}
+          <span className="faint">{node.category}</span>
+        </span>
+        <span className="muted num">
+          {t("details.mentions", {
+            m: formatInt(node.mention_count, lang),
+            d: formatInt(node.metrics.document_count, lang),
+          })}
+        </span>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="outline-btn"
+            aria-pressed={neighborsOnly}
+            onClick={() => {
+              setNeighborsOnly(!neighborsOnly);
+              if (tab !== "network") setTab("network");
+            }}
+          >
+            {t("details.neighborsOnly")}
+          </button>
+          <button type="button" className="outline-btn" onClick={centerOnGraph}>
+            {t("details.center")}
+          </button>
+        </div>
+      </div>
 
-      <section className="section">
-        <h3 className="section-title">Centralidad en la red filtrada</h3>
-        <dl className="metric-list">
-          {METRIC_ORDER.map((metric) => (
-            <Fragment key={metric}>
-              <dt title={METRICS[metric].description}>{METRICS[metric].label}</dt>
-              <dd>{formatMetric(metric, node.metrics[metric])}</dd>
-              <dd className="rank">
-                #{node.ranks[metric]} de {total}
-              </dd>
-            </Fragment>
-          ))}
-        </dl>
-      </section>
-
-      <section className="section">
-        <h3 className="section-title">Evolución ({METRICS[filters.metric].label})</h3>
-        {compare.isLoading && <p className="hint">Calculando períodos…</p>}
-        {compare.data && !trajectory && <p className="hint">Fuera del top 200 en ambos períodos.</p>}
-        {trajectory && (
-          <dl className="metric-list">
-            {trajectory.points.map((point) => (
-              <Fragment key={point.period}>
-                <dt>{point.period}</dt>
-                <dd>{point.value === null ? "—" : formatMetric(filters.metric, point.value)}</dd>
-                <dd className="rank">{point.rank === null ? "no aparece" : `#${point.rank}`}</dd>
-              </Fragment>
-            ))}
-          </dl>
-        )}
-      </section>
-
-      <section className="section">
-        <h3 className="section-title">Links en pantalla ({neighbors.length})</h3>
-        <ul className="neighbor-list">
-          {neighbors.slice(0, 30).map(({ edge, other }) => (
-            <li key={other.id}>
+      <div className="details-body">
+        <section className="group">
+          <div className="section-head">
+            <h3>{t("details.metrics")}</h3>
+            <span>{t("details.clickSize")}</span>
+          </div>
+          <div className="metric-grid">
+            {METRIC_ORDER.map((metric) => (
               <button
                 type="button"
-                onClick={() => select({ kind: "edge", source: edge.source, target: edge.target })}
-                title="Ver las oraciones que respaldan este link"
+                key={metric}
+                className="metric-card"
+                aria-pressed={filters.metric === metric}
+                title={metricInfo(metric, lang).description}
+                onClick={() => update({ metric })}
               >
-                <span className="dot" style={{ background: categoryColor(other.category) }} />
-                <span>{other.name}</span>
-                <span className="hint">{edge.sentence_count} or.</span>
+                <span className="label">{metricLabel(metric, lang)}</span>
+                <span className="value">{formatMetric(metric, node.metrics[metric], lang)}</span>
+                <span className="rank">
+                  <b>#{node.ranks[metric]}</b> {t("details.of", { n: formatInt(total, lang) })}
+                </span>
               </button>
-            </li>
-          ))}
-        </ul>
-        {neighbors.length === 0 && (
-          <p className="hint">
-            Sus links quedan fuera del top actual.{" "}
-            <button type="button" className="link-button" onClick={() => update({ topN: Math.min(500, filters.topN + 100) })}>
-              Mostrar más entidades
-            </button>
-          </p>
-        )}
-      </section>
-    </>
+            ))}
+          </div>
+        </section>
+
+        <section className="group">
+          <div className="section-head">
+            <h3>{t("details.evolution", { metric: metricLabel(filters.metric, lang) })}</h3>
+          </div>
+          {compare.isLoading && <p className="help ghost">{t("details.computingPeriods")}</p>}
+          {compare.data && !trajectory && <p className="help">{t("details.outOfTop")}</p>}
+          {trajectory && last && (
+            <div className="evo-card">
+              {points.map((point, index) => (
+                <div key={point.period} style={{ display: "contents" }}>
+                  {index > 0 && <span className="arrow" aria-hidden />}
+                  <div className="period" style={{ textAlign: index === points.length - 1 ? "right" : undefined }}>
+                    <span>{point.period.replace("-", "–")}</span>
+                    <strong>{point.rank === null ? "—" : `#${point.rank}`}</strong>
+                  </div>
+                </div>
+              ))}
+              {delta !== null && delta !== 0 && (
+                <span className={`delta${delta < 0 ? " down" : ""}`}>
+                  {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
+                </span>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="group">
+          <div className="section-head">
+            <h3>{t("details.strongestLinks")}</h3>
+            <span>{t("details.clickEvidence")}</span>
+          </div>
+          {neighbors.length > 0 ? (
+            <ul className="link-list">
+              {neighbors.slice(0, 30).map(({ edge, other }) => (
+                <li key={other.id}>
+                  <button
+                    type="button"
+                    className="link-row"
+                    title={t("details.evidenceHint")}
+                    onClick={() =>
+                      select({ kind: "edge", source: edge.source, target: edge.target }, { returnTo: node.id })
+                    }
+                  >
+                    <CategoryDot category={other.category} />
+                    <span className="name">
+                      {other.name}
+                      <small>{other.category}</small>
+                    </span>
+                    <span className="bar" aria-hidden>
+                      <span style={{ width: `${(edge.sentence_count / maxSentences) * 100}%` }} />
+                    </span>
+                    <span className="value">{formatInt(edge.sentence_count, lang)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="help">
+              {t("details.linksOutOfTop")}{" "}
+              <button type="button" className="text-btn" onClick={() => update({ topN: Math.min(400, filters.topN + 100) })}>
+                {t("details.showMore")}
+              </button>
+            </p>
+          )}
+        </section>
+      </div>
+    </aside>
   );
 }
 
-function highlight(text: string, terms: string[]) {
-  const unique = [...new Set(terms.filter(Boolean))].sort((a, b) => b.length - a.length);
-  if (!unique.length) return text;
-  const escaped = unique.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const pattern = new RegExp(`(${escaped.join("|")})`, "gi");
-  return text.split(pattern).map((part, index) =>
-    unique.some((term) => term.toLowerCase() === part.toLowerCase()) ? <mark key={index}>{part}</mark> : part,
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Marca cada mención con el color de su entidad. */
+function highlight(text: string, terms: { text: string; category: string }[], theme: Theme) {
+  const unique = [...new Map(terms.filter((term) => term.text).map((term) => [term.text.toLowerCase(), term])).values()].sort(
+    (a, b) => b.text.length - a.text.length,
   );
+  if (!unique.length) return text;
+  const pattern = new RegExp(`(${unique.map((term) => escapeRegExp(term.text)).join("|")})`, "gi");
+  return text.split(pattern).map((part, index) => {
+    const term = unique.find((item) => item.text.toLowerCase() === part.toLowerCase());
+    if (!term) return part;
+    return (
+      <mark
+        key={index}
+        style={{
+          background: categoryTint(term.category, theme),
+          borderBottom: `2px solid ${categoryColor(term.category, theme)}`,
+        }}
+      >
+        {part}
+      </mark>
+    );
+  });
 }
 
 function EdgeDetails({
@@ -173,6 +281,11 @@ function EdgeDetails({
   network: NetworkResponse;
   filters: Filters;
 }) {
+  const { t, lang } = useT();
+  const theme = useTheme();
+  const select = useSelectionStore((state) => state.select);
+  const returnTo = useSelectionStore((state) => state.returnTo);
+  const back = returnTo ? network.nodes.find((node) => node.id === returnTo) : undefined;
   const edge = network.edges.find(
     (item) =>
       (item.source === source.id && item.target === target.id) ||
@@ -190,45 +303,95 @@ function EdgeDetails({
   const evidence = useEvidence(params);
 
   return (
-    <>
-      <Header
-        title={
-          <>
-            <EntityRef name={source.name} category={source.category} /> ↔{" "}
-            <EntityRef name={target.name} category={target.category} />
-          </>
-        }
-        subtitle="Link por coocurrencia"
-      />
-      {edge && (
-        <p className="hint">
-          Coocurren en {edge.sentence_count} oración(es) de {edge.document_count} documento(s) · peso{" "}
-          {edge.weight.toFixed(2)} · {edge.confidence_tier}
-        </p>
-      )}
-      <section className="section">
-        <h3 className="section-title">Evidencia {evidence.data ? `(${evidence.data.total})` : ""}</h3>
-        {evidence.isLoading && <p className="hint">Cargando oraciones…</p>}
-        {evidence.error instanceof Error && <div className="notice error">{evidence.error.message}</div>}
-        <ul className="evidence-list">
-          {evidence.data?.items.map((item) => {
-            const terms = item.entities
-              .filter((entity) => entity.id === source.id || entity.id === target.id)
-              .map((entity) => entity.mention_text ?? entity.name);
-            return (
-              <li key={`${item.document_id}-${item.sentence_id}`}>
-                <span className="source">
-                  {item.document_name} · {item.year ?? "sin año"}
-                </span>
-                {highlight(item.text, terms)}
-              </li>
-            );
-          })}
-        </ul>
-        {evidence.data && evidence.data.total > evidence.data.items.length && (
-          <p className="hint">Mostrando {evidence.data.items.length} de {evidence.data.total} oraciones.</p>
+    <aside className="card details wide" aria-label={t("details.evidence")}>
+      <div className="details-head">
+        <div className="top">
+          {back ? (
+            <button type="button" className="text-btn" onClick={() => select({ kind: "node", id: back.id })}>
+              ← {back.name}
+            </button>
+          ) : (
+            <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>
+              {t("details.evidence")}
+            </span>
+          )}
+          <button type="button" className="close" aria-label={t("details.closeEvidence")} onClick={() => select(null)}>
+            ×
+          </button>
+        </div>
+        {back && (
+          <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>
+            {t("details.evidence")}
+          </span>
         )}
-      </section>
+        <div className="evidence-pair">
+          {[source, target].map((node, index) => (
+            <span key={node.id} style={{ display: "contents" }}>
+              {index === 1 && <span className="faint">↔</span>}
+              <button
+                type="button"
+                className="tag"
+                style={{ background: categoryTint(node.category, theme), borderColor: categoryColor(node.category, theme) }}
+                onClick={() => select({ kind: "node", id: node.id })}
+              >
+                <CategoryDot category={node.category} />
+                {node.name}
+              </button>
+            </span>
+          ))}
+        </div>
+        {edge && (
+          <span className="muted num">
+            {t("details.weight")} <strong style={{ color: "var(--tx)" }}>{formatWeight(edge.weight, lang)}</strong> ·{" "}
+            {t("details.sentencesIn", { n: formatInt(edge.sentence_count, lang) })}{" "}
+            <strong style={{ color: "var(--tx)", fontWeight: 500 }}>
+              {t("details.inDocuments", { n: formatInt(edge.document_count, lang) })}
+            </strong>
+            {evidence.data && t("details.showing", { n: evidence.data.items.length })}
+          </span>
+        )}
+      </div>
+      <div className="details-body" style={{ gap: 8 }}>
+        {evidence.isLoading &&
+          [0, 1, 2].map((key) => <div key={key} className="sentence ghost" style={{ height: 86 }} />)}
+        {evidence.error instanceof Error && <div className="notice error">{errorText(evidence.error, t)}</div>}
+        {evidence.data && <Sentences data={evidence.data} source={source} target={target} theme={theme} />}
+      </div>
+    </aside>
+  );
+}
+
+function Sentences({
+  data,
+  source,
+  target,
+  theme,
+}: {
+  data: EvidenceResponse;
+  source: ExplorerNode;
+  target: ExplorerNode;
+  theme: Theme;
+}) {
+  const { t, lang } = useT();
+  return (
+    <>
+      {data.items.map((item) => {
+        const terms = item.entities
+          .filter((entity) => entity.id === source.id || entity.id === target.id)
+          .map((entity) => ({ text: entity.mention_text ?? entity.name, category: entity.category }));
+        return (
+          <article className="sentence" key={`${item.document_id}-${item.sentence_id}`}>
+            <p>{highlight(item.text, terms, theme)}</p>
+            <footer>
+              <span title={item.document_name}>{item.document_name}</span>
+              <span className="num">{item.year ?? t("common.noYear")}</span>
+            </footer>
+          </article>
+        );
+      })}
+      {data.total > data.items.length && (
+        <p className="help">{t("details.showingOf", { n: data.items.length, t: formatInt(data.total, lang) })}</p>
+      )}
     </>
   );
 }

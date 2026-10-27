@@ -1,0 +1,149 @@
+/** Íconos del diseño, en SVG en línea para heredar el color del texto. */
+
+export function LogoIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+      <line x1="6" y1="7" x2="15" y2="5" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="6" y1="7" x2="11" y2="16" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="15" y1="5" x2="11" y2="16" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="6" cy="7" r="3" fill="currentColor" />
+      <circle cx="15" cy="5" r="2.2" fill="currentColor" />
+      <circle cx="11" cy="16" r="3.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function SummaryIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true">
+      <rect x="2" y="2" width="6" height="6" rx="2" fill="currentColor" />
+      <rect x="10" y="2" width="6" height="6" rx="2" fill="currentColor" />
+      <rect x="2" y="10" width="6" height="6" rx="2" fill="currentColor" />
+      <rect x="10" y="10" width="6" height="6" rx="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function NetworkIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <line x1="4.5" y1="5" x2="13" y2="4" />
+      <line x1="4.5" y1="5" x2="9" y2="13.5" />
+      <line x1="13" y1="4" x2="9" y2="13.5" />
+      <circle cx="4.5" cy="5" r="2.4" fill="currentColor" />
+      <circle cx="13" cy="4" r="1.8" fill="currentColor" />
+      <circle cx="9" cy="13.5" r="2.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function EvolutionIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 18 18"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="2,13 6.5,8.5 10,11 16,4.5" />
+      <polyline points="12,4.5 16,4.5 16,8.5" />
+    </svg>
+  );
+}
+
+export function TableIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <line x1="3" y1="5" x2="15" y2="5" />
+      <line x1="3" y1="9" x2="15" y2="9" />
+      <line x1="3" y1="13" x2="11" y2="13" />
+    </svg>
+  );
+}
+
+export function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <circle cx="7" cy="7" r="4.6" />
+      <line x1="10.5" y1="10.5" x2="14" y2="14" />
+    </svg>
+  );
+}
+
+export function ThemeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true">
+      <circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function ChevronIcon({ direction = "left" }: { direction?: "left" | "right" }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      style={{ transform: direction === "right" ? "rotate(180deg)" : undefined }}
+    >
+      <polyline points="7.5,2.5 4,6 7.5,9.5" />
+    </svg>
+  );
+}
+
+export function ArrowIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <line x1="2.5" y1="7" x2="11" y2="7" />
+      <polyline points="7.5,3.5 11,7 7.5,10.5" />
+    </svg>
+  );
+}
+
+export function HomeIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2 6 6 2.5 10 6V10H2Z" />
+    </svg>
+  );
+}
+
+export function FilterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <line x1="2.5" y1="4.5" x2="13.5" y2="4.5" />
+      <line x1="4.5" y1="8" x2="11.5" y2="8" />
+      <line x1="6.5" y1="11.5" x2="9.5" y2="11.5" />
+    </svg>
+  );
+}
+
+export function ResetIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.8 7a4.2 4.2 0 1 0 1.3-3.05" />
+      <polyline points="2.6,1.9 2.6,4.6 5.3,4.6" />
+    </svg>
+  );
+}
+
+export function MoreIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor">
+      <circle cx="4" cy="9" r="1.6" />
+      <circle cx="9" cy="9" r="1.6" />
+      <circle cx="14" cy="9" r="1.6" />
+    </svg>
+  );
+}

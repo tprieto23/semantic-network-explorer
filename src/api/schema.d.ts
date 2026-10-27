@@ -678,7 +678,8 @@ export interface components {
             /** Year */
             year?: number | null;
             productive_sector?: components["schemas"]["ProductiveSector"] | null;
-            document_type?: components["schemas"]["DocumentType"] | null;
+            /** Document Type */
+            document_type?: string | null;
         };
         /** Body_upload_batch_documents_batch_post */
         Body_upload_batch_documents_batch_post: {
@@ -688,7 +689,8 @@ export interface components {
             /** Year */
             year?: number | null;
             productive_sector?: components["schemas"]["ProductiveSector"] | null;
-            document_type?: components["schemas"]["DocumentType"] | null;
+            /** Document Type */
+            document_type?: string | null;
             /** Metadata */
             metadata?: string | null;
             /** Language */
@@ -705,7 +707,8 @@ export interface components {
             /** Year */
             year?: number | null;
             productive_sector?: components["schemas"]["ProductiveSector"] | null;
-            document_type?: components["schemas"]["DocumentType"] | null;
+            /** Document Type */
+            document_type?: string | null;
             /** Metadata */
             metadata?: string | null;
             /** Language */
@@ -754,7 +757,8 @@ export interface components {
             /** Year */
             year?: number | null;
             productive_sector?: components["schemas"]["ProductiveSector"] | null;
-            document_type?: components["schemas"]["DocumentType"] | null;
+            /** Document Type */
+            document_type?: string | null;
             /**
              * Uploaded At
              * Format: date-time
@@ -797,11 +801,6 @@ export interface components {
              */
             include_minor_components: boolean;
         };
-        /**
-         * DocumentType
-         * @enum {string}
-         */
-        DocumentType: "academic" | "technical_report" | "project_report" | "policy_document" | "manual_or_guide" | "institutional_document" | "other";
         /** EdgeEvidenceEntity */
         EdgeEvidenceEntity: {
             /** Canonical Id */
@@ -940,7 +939,7 @@ export interface components {
              */
             productive_sector: "all" | "Agroforestry";
             /** Periods */
-            periods?: ("2021-2023" | "2024-2026")[];
+            periods?: ("2000-2020" | "2021-2023" | "2024-2026")[];
             /**
              * Top K
              * @default 20
@@ -1207,7 +1206,7 @@ export interface components {
              * @default all
              * @enum {string}
              */
-            period: "all" | "2021-2023" | "2024-2026";
+            period: "all" | "2000-2020" | "2021-2023" | "2024-2026";
             /**
              * Top N
              * @description Cantidad de nodos a devolver según ranking_metric; null devuelve todos
@@ -2255,8 +2254,8 @@ export interface operations {
                     year?: number;
                     /** @enum {string} */
                     productive_sector?: "Agroforestry";
-                    /** @enum {string} */
-                    document_type?: "academic" | "technical_report" | "project_report" | "policy_document" | "manual_or_guide" | "institutional_document" | "other";
+                    /** @description Tipo, fuente, autor o revista según el catálogo del corpus. */
+                    document_type?: string;
                 };
             };
         };
@@ -2944,7 +2943,7 @@ export interface operations {
             query: {
                 source_id: string;
                 target_id: string;
-                period?: "all" | "2021-2023" | "2024-2026";
+                period?: "all" | "2000-2020" | "2021-2023" | "2024-2026";
                 incubator_number?: "all" | number;
                 language?: string;
                 document_ids?: string[] | null;
