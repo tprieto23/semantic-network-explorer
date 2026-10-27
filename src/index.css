@@ -760,6 +760,35 @@ div.wide-only {
   opacity: 0.55;
 }
 
+.excluded-chip {
+  color: var(--tx);
+  padding-right: 4px;
+  text-decoration-color: var(--tx3);
+}
+
+.excluded-chip > span:not(.dot) {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.excluded-chip button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surf2);
+  color: var(--tx2);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.excluded-chip button:hover {
+  background: var(--acc2);
+  color: var(--acc);
+}
+
 .chip .count {
   color: var(--tx3);
   font-weight: 400;

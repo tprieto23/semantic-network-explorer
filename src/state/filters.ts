@@ -35,6 +35,8 @@ export interface Filters {
   metric: RankingMetric;
   topN: number;
   edgeDisplay: EdgeDisplay;
+  /** Entidades canónicas que se quitan antes de calcular la red. */
+  excludedEntityIds: string[];
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -52,6 +54,7 @@ export const DEFAULT_FILTERS: Filters = {
   metric: "pagerank",
   topN: 150,
   edgeDisplay: "strongest",
+  excludedEntityIds: [],
 };
 
 const SECTORS: SectorFilter[] = ["Agroforestry", "all"];
@@ -75,6 +78,8 @@ const CATEGORIES: CategoryCode[] = [
   "eco_INFRA",
   "INFRA",
 ];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
@@ -104,6 +109,7 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.metric !== DEFAULT_FILTERS.metric) params.set("metric", filters.metric);
   if (filters.topN !== DEFAULT_FILTERS.topN) params.set("top", String(filters.topN));
   if (filters.edgeDisplay !== DEFAULT_FILTERS.edgeDisplay) params.set("vis", filters.edgeDisplay);
+  if (filters.excludedEntityIds.length) params.set("excl", filters.excludedEntityIds.join(","));
   const search = params.toString();
   return search ? `?${search}` : "";
 }
@@ -139,6 +145,7 @@ export function filtersFromSearch(search: string): Filters {
     metric: oneOf(params.get("metric"), METRICS, DEFAULT_FILTERS.metric),
     topN: positiveInt(params.get("top"), DEFAULT_FILTERS.topN, 5000),
     edgeDisplay: oneOf(params.get("vis"), ["strongest", "all"] as const, DEFAULT_FILTERS.edgeDisplay),
+    excludedEntityIds: [...new Set((params.get("excl") ?? "").split(",").filter((id) => UUID.test(id)))],
   };
 }
 
@@ -155,6 +162,7 @@ function sharedRequest(filters: Filters) {
     edge_weighting: filters.weighting,
     minimum_edge_weight: filters.minWeight,
     ranking_metric: filters.metric,
+    excluded_entity_ids: filters.excludedEntityIds.length ? filters.excludedEntityIds : null,
   };
 }
 

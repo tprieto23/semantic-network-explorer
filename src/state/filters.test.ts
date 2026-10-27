@@ -34,6 +34,7 @@ describe("URL serialization", () => {
       metric: "betweenness",
       topN: 80,
       edgeDisplay: "all",
+      excludedEntityIds: ["435eb7d8-1d47-41a9-ba5a-c6e0ac5e5184"],
     };
 
     expect(filtersFromSearch(filtersToSearch(filters))).toEqual(filters);
@@ -87,5 +88,13 @@ describe("activeFilterCount", () => {
       activeFilterCount({ ...DEFAULT_FILTERS, period: "2021-2023", categories: ["CHAR", "PRAC"], topN: 60 }),
     ).toBe(3);
     expect(activeFilterCount({ ...DEFAULT_FILTERS, categoryPairs: [] })).toBe(0);
+  });
+
+  it("keeps only valid, unique excluded entity ids from the URL", () => {
+    const id = "435eb7d8-1d47-41a9-ba5a-c6e0ac5e5184";
+    expect(filtersFromSearch(`?excl=${id},MADRE,${id}`).excludedEntityIds).toEqual([id]);
+    expect(toNetworkRequest({ ...DEFAULT_FILTERS, excludedEntityIds: [id] }).excluded_entity_ids).toEqual([id]);
+    expect(toNetworkRequest(DEFAULT_FILTERS).excluded_entity_ids).toBeNull();
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, excludedEntityIds: [id] })).toBe(1);
   });
 });

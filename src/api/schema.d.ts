@@ -917,6 +917,11 @@ export interface components {
              */
             ranking_metric: "pagerank" | "degree" | "strength" | "betweenness" | "closeness" | "document_count";
             /**
+             * Excluded Entity Ids
+             * @description Entidades canónicas que se quitan antes de construir la red; las métricas del resto se calculan sin ellas
+             */
+            excluded_entity_ids?: string[] | null;
+            /**
              * Incubator Number
              * @default all
              */
@@ -1070,6 +1075,20 @@ export interface components {
             /** Items */
             items: components["schemas"]["ExplorerEvidenceItem"][];
         };
+        /** ExplorerExcludedEntity */
+        ExplorerExcludedEntity: {
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @description null si la entidad no aparece en este alcance
+             */
+            name: string | null;
+            /** Category */
+            category: string | null;
+            /** Mention Count */
+            mention_count: number;
+        };
         /** ExplorerFiltersSummary */
         ExplorerFiltersSummary: {
             /** Categories */
@@ -1094,6 +1113,8 @@ export interface components {
             ranking_metric: "pagerank" | "degree" | "strength" | "betweenness" | "closeness" | "document_count";
             /** Top N */
             top_n: number | null;
+            /** Excluded Entity Ids */
+            excluded_entity_ids?: string[] | null;
         };
         /** ExplorerLeader */
         ExplorerLeader: {
@@ -1180,6 +1201,11 @@ export interface components {
              */
             ranking_metric: "pagerank" | "degree" | "strength" | "betweenness" | "closeness" | "document_count";
             /**
+             * Excluded Entity Ids
+             * @description Entidades canónicas que se quitan antes de construir la red; las métricas del resto se calculan sin ellas
+             */
+            excluded_entity_ids?: string[] | null;
+            /**
              * Incubator Number
              * @default all
              */
@@ -1230,6 +1256,11 @@ export interface components {
             metric_provenance: components["schemas"]["ExplorerMetricProvenance"];
             /** Warnings */
             warnings: string[];
+            /**
+             * Excluded Entities
+             * @default []
+             */
+            excluded_entities: components["schemas"]["ExplorerExcludedEntity"][];
         };
         /** ExplorerNode */
         ExplorerNode: {

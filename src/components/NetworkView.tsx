@@ -309,6 +309,14 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
       apply: () => update({ categories: [], categoryPairs: [] }),
     });
   }
+  if (filters.excludedEntityIds.length > 0) {
+    options.push({
+      label: t("net.optExcluded"),
+      from: `${filters.excludedEntityIds.length}`,
+      to: "0",
+      apply: () => update({ excludedEntityIds: [] }),
+    });
+  }
   if (filters.period !== "all") {
     options.push({
       label: t("net.optPeriod"),

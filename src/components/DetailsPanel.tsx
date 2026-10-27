@@ -143,6 +143,18 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
           <button type="button" className="outline-btn" onClick={centerOnGraph}>
             {t("details.center")}
           </button>
+          <button
+            type="button"
+            className="outline-btn"
+            title={t("details.excludeHint")}
+            onClick={() => {
+              update({ excludedEntityIds: [...new Set([...filters.excludedEntityIds, node.id])] });
+              setNeighborsOnly(false);
+              select(null);
+            }}
+          >
+            {t("details.exclude")}
+          </button>
         </div>
       </div>
 

@@ -167,6 +167,10 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
             </div>
           </section>
 
+          {filters.excludedEntityIds.length > 0 && (
+            <ExcludedEntities network={network} ids={filters.excludedEntityIds} update={update} />
+          )}
+
           <section className="group">
             <h3 className="group-title">{t("filters.importance")}</h3>
             <div className="field">
@@ -233,6 +237,49 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+function ExcludedEntities({
+  network,
+  ids,
+  update,
+}: {
+  network: NetworkResponse | undefined;
+  ids: string[];
+  update: (patch: Partial<Filters>) => void;
+}) {
+  const { t, lang } = useT();
+  const known = new Map((network?.excluded_entities ?? []).map((entity) => [entity.id, entity]));
+  return (
+    <section className="group">
+      <div className="group-head">
+        <h3 className="group-title">{t("filters.excluded")}</h3>
+        <button type="button" className="text-btn" onClick={() => update({ excludedEntityIds: [] })}>
+          {t("filters.includeAll")}
+        </button>
+      </div>
+      <div className="chips">
+        {ids.map((id) => {
+          const entity = known.get(id);
+          const name = entity?.name ?? t("filters.excludedUnknown");
+          return (
+            <span key={id} className="chip excluded-chip" title={entity?.category ? categoryLabel(entity.category, lang) : undefined}>
+              {entity?.category && <CategoryDot category={entity.category} />}
+              <span className={entity?.name ? undefined : "faint"}>{name}</span>
+              <button
+                type="button"
+                aria-label={t("filters.includeAgain", { name })}
+                onClick={() => update({ excludedEntityIds: ids.filter((item) => item !== id) })}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+      </div>
+      <p className="help">{t("filters.excludedHelp")}</p>
+    </section>
   );
 }
 
