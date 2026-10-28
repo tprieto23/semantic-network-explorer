@@ -228,7 +228,6 @@ input[type="range"] {
   transform: scale(0.94);
 }
 
-.rail-btn[aria-current="page"],
 .pill-group button[aria-pressed="true"] {
   background: var(--sel-bg);
   color: var(--sel-fg);
@@ -3099,12 +3098,7 @@ button.chip-static:hover {
   }
 
   .tabbar-btn[aria-current="page"] .tabbar-ico {
-    background: var(--sel-bg);
     color: var(--sel-fg);
-    box-shadow:
-      var(--sel-shadow),
-      inset 0 0 0 1px var(--sel-border),
-      inset 0 1px 0 var(--sel-shine);
   }
 
   .workspace {
@@ -4011,4 +4005,223 @@ button.chip-static:hover {
   background:
     var(--glass-bg-hover),
     rgba(31, 36, 33, 0.9);
+}
+
+/* ---------- Transiciones ----------
+   Todo se anima con transform y opacity (lo mueve el compositor, sin tirones). Las
+   entradas usan «backwards»: al terminar no queda una animación activa que convierta al
+   contenedor en referencia de los elementos con position: fixed que tenga adentro. */
+
+/* Indicador de vidrio que se desliza hasta la opción activa (barra lateral y barra
+   inferior del celular), con un leve rebote. */
+.nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: var(--sel-bg);
+  box-shadow:
+    var(--sel-shadow),
+    inset 0 0 0 1px var(--sel-border),
+    inset 0 1px 0 var(--sel-shine);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.42s cubic-bezier(0.34, 1.45, 0.64, 1),
+    width 0.3s ease,
+    height 0.3s ease,
+    opacity 0.2s ease;
+}
+
+.rail-btn,
+.rail-logo {
+  z-index: 1;
+}
+
+.rail-btn[aria-current="page"] {
+  color: var(--sel-fg);
+}
+
+.tabbar-indicator {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .tabbar-indicator {
+    display: block;
+  }
+
+  .tabbar-btn {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+/* El ícono de la opción recién elegida hace un pequeño «pop». */
+.rail-btn[aria-current="page"] svg,
+.tabbar-btn[aria-current="page"] .tabbar-ico svg {
+  animation: icon-pop 0.42s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+
+@keyframes icon-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Modales: el fondo se funde y el diálogo sube y crece un poco; al cerrar, al revés. */
+.modal-backdrop {
+  animation: backdrop-in 0.22s ease-out backwards;
+}
+
+.modal-backdrop > .card {
+  animation: dialog-in 0.32s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+
+.modal-backdrop.closing {
+  animation: backdrop-out 0.18s ease-in forwards;
+}
+
+.modal-backdrop.closing > .card {
+  animation: dialog-out 0.18s ease-in forwards;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+/* En celular los modales son hojas: suben desde abajo y bajan al cerrar. */
+@media (max-width: 640px) {
+  .modal-backdrop > .card {
+    animation-name: sheet-in;
+  }
+
+  .modal-backdrop.closing > .card {
+    animation-name: sheet-out;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* Menú, ayuda, guía y lista de vistas: aparecen desde su esquina de origen. */
+.menu,
+.popover {
+  transform-origin: top right;
+  animation: pop-in 0.2s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+
+.guided-pop {
+  transform-origin: top left;
+  animation: pop-in 0.2s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+
+.guide {
+  animation: guide-in 0.36s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+@keyframes guide-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.98);
+  }
+}
+
+/* Cambio de vista: el contenido entra con un fundido corto; el detalle, desde la derecha. */
+.scroll-view,
+.stage,
+.table-card {
+  animation: view-in 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (min-width: 641px) {
+  .details {
+    animation: details-in 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+  }
+}
+
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+/* Con «reducir movimiento»: sin desplazamientos ni rebotes; solo fundidos breves. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-indicator {
+    transition: opacity 0.15s ease;
+  }
+
+  .rail-btn[aria-current="page"] svg,
+  .tabbar-btn[aria-current="page"] .tabbar-ico svg {
+    animation: none;
+  }
+
+  .modal-backdrop > .card,
+  .menu,
+  .popover,
+  .guided-pop,
+  .scroll-view,
+  .stage,
+  .table-card,
+  .details {
+    animation: backdrop-in 0.15s ease-out backwards;
+  }
+
+  .guide {
+    animation: none;
+  }
 }

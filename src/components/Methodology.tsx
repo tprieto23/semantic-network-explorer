@@ -4,6 +4,7 @@ import type { ExplorerMeta } from "../api/client";
 import { METRIC_ORDER, categoryColor, categoryLabel, formatInt, metricInfo } from "../domain/vocabulary";
 import type { MessageKey } from "../i18n";
 import { useT } from "../i18n";
+import { useAnimatedClose } from "./useAnimatedClose";
 
 /**
  * Primera oración de la definición del codebook: el resto son instrucciones para el
@@ -43,8 +44,9 @@ const LIMITS: MessageKey[] = ["method.limit1", "method.limit2", "method.limit3",
  * Metodología: qué se analiza, cómo se construye la red, qué es cada categoría y cada
  * métrica, y qué límites tiene. Organizada en pestañas para no obligar a leerlo todo.
  */
-export function Methodology({ meta, onClose }: { meta: ExplorerMeta | undefined; onClose: () => void }) {
+export function Methodology({ meta, onClose: dismiss }: { meta: ExplorerMeta | undefined; onClose: () => void }) {
   const { t, lang } = useT();
+  const { closing, close: onClose } = useAnimatedClose(dismiss);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -78,7 +80,7 @@ export function Methodology({ meta, onClose }: { meta: ExplorerMeta | undefined;
     : [];
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={`modal-backdrop${closing ? " closing" : ""}`} onClick={onClose}>
       <div
         className="card method-modal"
         role="dialog"

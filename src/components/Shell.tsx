@@ -8,6 +8,7 @@ import type { Tab } from "../state/selection";
 import { useSelectionStore } from "../state/selection";
 import { useUiStore } from "../state/ui";
 import { Methodology } from "./Methodology";
+import { useSlidingIndicator } from "./useSlidingIndicator";
 import { useCopyLink } from "./useCopyLink";
 import { useThemeStore } from "../state/theme";
 import { BookIcon, EvolutionIcon, GlobeIcon, LinkIcon, LogoIcon, MoreIcon, NetworkIcon, SearchIcon, SummaryIcon, TableIcon, ThemeIcon } from "./icons";
@@ -25,8 +26,10 @@ export function NavRail() {
   const { t } = useT();
   const tab = useSelectionStore((state) => state.tab);
   const setTab = useSelectionStore((state) => state.setTab);
+  const { containerRef, indicatorRef } = useSlidingIndicator<HTMLElement>(tab);
   return (
-    <nav className="rail" aria-label={t("nav.views")}>
+    <nav className="rail" aria-label={t("nav.views")} ref={containerRef}>
+      <span className="nav-indicator rail-indicator" ref={indicatorRef} aria-hidden="true" />
       <span className="rail-logo" data-tip={t("app.title")}>
         <LogoIcon />
       </span>
@@ -54,8 +57,11 @@ export function BottomTabs() {
   const { t } = useT();
   const tab = useSelectionStore((state) => state.tab);
   const setTab = useSelectionStore((state) => state.setTab);
+  // El indicador se ajusta al ícono de la pestaña activa, no a toda la pestaña.
+  const { containerRef, indicatorRef } = useSlidingIndicator<HTMLElement>(tab, "[aria-current='page'] .tabbar-ico");
   return (
-    <nav className="tabbar" aria-label={t("nav.views")}>
+    <nav className="tabbar" aria-label={t("nav.views")} ref={containerRef}>
+      <span className="nav-indicator tabbar-indicator" ref={indicatorRef} aria-hidden="true" />
       {VIEWS.map((view) => (
         <button
           key={view.id}

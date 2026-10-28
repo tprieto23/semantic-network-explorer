@@ -14,6 +14,7 @@ import { ExpandIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
 import { InfoTip } from "./InfoTip";
+import { useAnimatedClose } from "./useAnimatedClose";
 import { Loader } from "./Loader";
 import { periodDocumentCount } from "../domain/scope";
 
@@ -278,8 +279,17 @@ function PeriodCanvas({
 }
 
 /** Red de un período a pantalla casi completa; Escape o clic fuera la cierran. */
-function PeriodModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+function PeriodModal({
+  title,
+  onClose: dismiss,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   const { t } = useT();
+  const { closing, close: onClose } = useAnimatedClose(dismiss);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -288,7 +298,7 @@ function PeriodModal({ title, onClose, children }: { title: string; onClose: () 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className={`modal-backdrop${closing ? " closing" : ""}`} onClick={onClose}>
       <div
         className="card period-modal"
         role="dialog"
