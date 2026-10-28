@@ -22,6 +22,7 @@ import { ChevronIcon, FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { DocumentTypeFilter } from "./DocumentTypeFilter";
 import { GlassSelect } from "./GlassSelect";
+import { InfoTip } from "./InfoTip";
 import { useSwipeToClose } from "./useSwipeToClose";
 import { StageFunnel } from "./StageFunnel";
 
@@ -198,7 +199,12 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
           <section className="group">
             <h3 className="group-title">{t("filters.importance")}</h3>
             <div className="field">
-              <label htmlFor="metric">{t("filters.sizeBy")}</label>
+              <span className="label-with-info">
+                <label htmlFor="metric">{t("filters.sizeBy")}</label>
+                <InfoTip label={t("filters.about", { name: t("filters.sizeBy") })}>
+                  {metricInfo(filters.metric, lang).description}
+                </InfoTip>
+              </span>
               <GlassSelect
                 id="metric"
                 value={filters.metric}
@@ -209,7 +215,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                   hint: metricInfo(metric, lang).hint,
                 }))}
               />
-              <p className="help">{metricInfo(filters.metric, lang).description}</p>
             </div>
             <div className="field">
               <div className="field-row">
@@ -227,7 +232,12 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
               />
             </div>
             <div className="field">
-              <span className="field-label">{t("filters.visibleLinks")}</span>
+              <span className="label-with-info">
+                <span className="field-label">{t("filters.visibleLinks")}</span>
+                <InfoTip label={t("filters.about", { name: t("filters.visibleLinks") })}>
+                  {filters.edgeDisplay === "strongest" ? t("filters.strongestHelp") : t("filters.allHelp")}
+                </InfoTip>
+              </span>
               <div className="segmented" role="group" aria-label={t("filters.visibleLinks")}>
                 <button
                   type="button"
@@ -240,12 +250,14 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                   {t("filters.allLinks")}
                 </button>
               </div>
-              <p className="help">
-                {filters.edgeDisplay === "strongest" ? t("filters.strongestHelp") : t("filters.allHelp")}
-              </p>
             </div>
             <div className="field">
-              <span className="field-label">{t("filters.colorBy")}</span>
+              <span className="label-with-info">
+                <span className="field-label">{t("filters.colorBy")}</span>
+                <InfoTip label={t("filters.about", { name: t("filters.colorBy") })}>
+                  {filters.colorBy === "community" ? t("filters.communityHelp") : t("filters.categoryHelp")}
+                </InfoTip>
+              </span>
               <div className="segmented" role="group" aria-label={t("filters.colorBy")}>
                 <button
                   type="button"
@@ -262,9 +274,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                   {t("filters.colorCommunity")}
                 </button>
               </div>
-              <p className="help">
-                {filters.colorBy === "community" ? t("filters.communityHelp") : t("filters.categoryHelp")}
-              </p>
             </div>
           </section>
 
@@ -513,7 +522,12 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
 
       <div className="field">
         <div className="field-row">
-          <label htmlFor="min-docs">{t("filters.minRecurrence")}</label>
+          <span className="label-with-info">
+            <label htmlFor="min-docs">{t("filters.minRecurrence")}</label>
+            <InfoTip label={t("filters.about", { name: t("filters.minRecurrence") })}>
+              {t("filters.recurrenceHelp")}
+            </InfoTip>
+          </span>
           <strong className="num">{t("filters.recurrenceValue", { n: filters.minDocuments })}</strong>
         </div>
         <input
@@ -524,14 +538,17 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
           value={filters.minDocuments}
           onChange={(event) => update({ minDocuments: Number(event.target.value) })}
         />
-        <p className="help">
-          {t("filters.recurrenceHelp")}
-          {filters.minDocuments === 1 && t("filters.recurrenceSlow")}
-        </p>
+        {/* Es una advertencia, no una explicación: queda a la vista. */}
+        {filters.minDocuments === 1 && <p className="help warn">{t("filters.recurrenceSlow").trim()}</p>}
       </div>
 
       <div className="field">
-        <label htmlFor="weighting">{t("filters.weighting")}</label>
+        <span className="label-with-info">
+          <label htmlFor="weighting">{t("filters.weighting")}</label>
+          <InfoTip label={t("filters.about", { name: t("filters.weighting") })}>
+            {weightings[filters.weighting].description}
+          </InfoTip>
+        </span>
         <GlassSelect
           id="weighting"
           value={filters.weighting}
@@ -541,7 +558,6 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
             label: weightings[value].label,
           }))}
         />
-        <p className="help">{weightings[filters.weighting].description}</p>
       </div>
       <div className="field">
         <label htmlFor="min-weight">{t("filters.minWeight")}</label>

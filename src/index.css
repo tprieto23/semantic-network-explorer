@@ -2518,16 +2518,14 @@ button.essential:hover {
 }
 
 .info-btn:hover,
-.info-tip.pinned .info-btn {
+.info-btn.open {
   color: var(--tx);
   background: var(--surf2);
 }
 
 .info-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: -8px;
-  z-index: 20;
+  position: fixed;
+  z-index: 85;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2541,21 +2539,8 @@ button.essential:hover {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.45;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-3px);
-  transition:
-    opacity 0.15s,
-    transform 0.15s,
-    visibility 0.15s;
-}
-
-.info-tip:hover .info-pop,
-.info-btn:focus-visible + .info-pop,
-.info-tip.pinned .info-pop {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
+  pointer-events: none;
+  animation: tooltip-in 0.12s ease-out;
 }
 
 .info-text {
@@ -2583,7 +2568,7 @@ button.essential:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .info-pop {
-    transition: none;
+    animation: none;
   }
 }
 
@@ -3590,4 +3575,20 @@ button.chip-static:hover {
   .toast {
     bottom: calc(86px + env(safe-area-inset-bottom));
   }
+}
+
+/* Etiqueta de campo con su botón «i» al lado. */
+.label-with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.label-with-info .info-btn {
+  width: 20px;
+  height: 20px;
+}
+
+.help.warn {
+  color: var(--warn);
 }
