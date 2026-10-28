@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CompareResponse, ExplorerMeta, NetworkResponse, RankingMetric } from "../api/client";
 import { useCompare, useNetwork } from "../api/queries";
 import { leaderChanges, strongestLinks } from "../domain/insights";
@@ -11,6 +11,7 @@ import { COMPARED_PERIODS } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
 import { CategoryDot } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
+import { InfoTip } from "./InfoTip";
 import { Loader } from "./Loader";
 import { periodDocumentCount } from "../domain/scope";
 
@@ -98,9 +99,31 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
 
       <div className="evo-bottom">
         <section className="card slope-card">
-          <div className="section-head">
-            <h3>{t("evo.topK", { k: TOP_K, metric: metricLabel(filters.metric, lang) })}</h3>
-            <span>{t("evo.thick")}</span>
+          <div className="slope-head">
+            <h3>{t("evo.slopeTitle", { k: TOP_K, metric: metricLabel(filters.metric, lang) })}</h3>
+            <InfoTip label={t("evo.slopeInfo")}>
+              <span className="info-text">{t("evo.slopeHelp", { k: TOP_K })}</span>
+              <span className="slope-legend">
+                <span>
+                  <svg width="22" height="8" aria-hidden="true">
+                    <line x1="1" y1="4" x2="21" y2="4" strokeWidth="3" />
+                  </svg>
+                  {t("evo.legendStrong")}
+                </span>
+                <span>
+                  <svg width="22" height="8" aria-hidden="true">
+                    <line x1="1" y1="4" x2="21" y2="4" strokeWidth="1.4" />
+                  </svg>
+                  {t("evo.legendSoft")}
+                </span>
+                <span>
+                  <svg width="22" height="8" aria-hidden="true">
+                    <line x1="1" y1="4" x2="21" y2="4" strokeWidth="1.6" strokeDasharray="3 3" />
+                  </svg>
+                  {t("evo.legendInOut", { k: TOP_K })}
+                </span>
+              </span>
+            </InfoTip>
           </div>
           {data ? (
             <SlopeChart data={data} />
@@ -133,7 +156,7 @@ function LeaderCard({ data, metric }: { data: CompareResponse; metric: RankingMe
       type="button"
       className={`leader-card${changed ? " changed" : ""}`}
       onClick={() => latest && select({ kind: "node", id: latest.id })}
-      title={metricInfo(metric, lang).description}
+      data-tip={metricInfo(metric, lang).description}
     >
       <span className="label">{metricLabel(metric, lang)}</span>
       {latest ? (
@@ -201,87 +224,157 @@ function shorten(name: string) {
   return name.length > MAX_LABEL ? `${name.slice(0, MAX_LABEL - 1)}…` : name;
 }
 
-/** Ranking del top K en cada período; cada línea une las posiciones de una entidad. */
+/** Ancho disponible del contenedor, para dibujar el SVG a escala 1:1 (el texto no se agranda). */
+function useWidth<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+
+/**
+ * Ranking del top K en cada período; cada línea une los puestos de una entidad. Cuando
+ * una entidad entra o sale del top, solo se dibuja un trazo corto punteado hacia abajo:
+ * unir todo con una fila «fuera del top» formaba un abanico que tapaba el gráfico.
+ */
 function SlopeChart({ data }: { data: CompareResponse }) {
   const { t } = useT();
   const select = useSelectionStore((state) => state.select);
-  const width = 480;
-  const left = 160;
-  const right = width - 160;
-  const top = 28;
-  const row = 19;
-  const outside = top + data.top_k * row + 14;
-  const height = outside + 16;
+  const [ref, measured] = useWidth<HTMLDivElement>();
+  const width = Math.min(Math.max(measured, 320), 720);
+  const labelWidth = Math.min(Math.max(width * 0.3, 110), 190);
+  const left = labelWidth;
+  const right = width - labelWidth;
+  const top = 26;
+  const row = 20;
+  const height = top + (data.top_k - 1) * row + 18;
   const columns = data.periods.length;
-  const x = (index: number) => (columns <= 1 ? left : left + ((right - left) * index) / (columns - 1));
-  const y = (rank: number | null) => (rank !== null && rank <= data.top_k ? top + (rank - 1) * row : outside);
+  const gap = columns <= 1 ? 0 : (right - left) / (columns - 1);
+  const x = (index: number) => left + gap * index;
+  const y = (rank: number) => top + (rank - 1) * row;
+  const inTop = (rank: number | null): rank is number => rank !== null && rank <= data.top_k;
   const last = columns - 1;
+  const stub = Math.min(gap * 0.3, 46);
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t("evo.slopeAria", { k: data.top_k })}>
-      <g className="head">
-        {data.periods.map((period, index) => (
-          <text
-            key={period}
-            x={index === 0 ? x(index) - 8 : index === last ? x(index) + 8 : x(index)}
-            y={12}
-            textAnchor={index === 0 ? "end" : index === last ? "start" : "middle"}
-          >
-            {periodLabel(period)}
-          </text>
-        ))}
-      </g>
-      {data.periods.map((period, index) => (
-        <line key={period} x1={x(index)} x2={x(index)} y1={top - 8} y2={outside} stroke="var(--line)" />
-      ))}
-      {data.trajectories.map((trajectory) => {
-        const points = trajectory.points;
-        const firstRank = points[0]?.rank ?? null;
-        const lastRank = points[last]?.rank ?? null;
-        const previousRank = points[last - 1]?.rank ?? null;
-        const delta = previousRank !== null && lastRank !== null ? previousRank - lastRank : null;
-        const strong = delta === null || Math.abs(delta) >= 5;
-        const color = categoryColor(trajectory.category);
-        const path = points.map((point, index) => `${x(index)},${y(point.rank)}`).join(" ");
-        const summary = points.map((point) => `#${point.rank ?? "—"}`).join(" → ");
-        return (
-          <g
-            key={trajectory.id}
-            className="series"
-            onClick={() => select({ kind: "node", id: trajectory.id })}
-            role="button"
-            aria-label={`${trajectory.name}: ${summary}`}
-          >
-            <title>{`${trajectory.name}: ${summary}`}</title>
-            <polyline
-              points={path}
-              fill="none"
-              stroke={color}
-              strokeWidth={strong ? 2.6 : 1.3}
-              strokeLinejoin="round"
-              opacity={0.9}
-            />
-            {points.map((point, index) => (
-              <circle key={point.period} cx={x(index)} cy={y(point.rank)} r={3} fill={color} />
+    <div ref={ref} className="slope-frame">
+      {measured > 0 && (
+        <svg width={width} height={height} role="img" aria-label={t("evo.slopeAria", { k: data.top_k })}>
+          <g className="head">
+            {data.periods.map((period, index) => (
+              <text
+                key={period}
+                x={index === 0 ? x(index) - 8 : index === last ? x(index) + 8 : x(index)}
+                y={12}
+                textAnchor={index === 0 ? "end" : index === last ? "start" : "middle"}
+              >
+                {periodLabel(period)}
+              </text>
             ))}
-            {firstRank !== null && firstRank <= data.top_k && (
-              <text x={x(0) - 8} y={y(firstRank) + 4} textAnchor="end">
-                #{firstRank} {shorten(trajectory.name)}
-              </text>
-            )}
-            {lastRank !== null && lastRank <= data.top_k && (
-              <text x={x(last) + 8} y={y(lastRank) + 4} className={strong ? "strong" : undefined}>
-                #{lastRank} {shorten(trajectory.name)}
-                {delta !== null && delta !== 0 ? ` ${delta > 0 ? "▲" : "▼"}${Math.abs(delta)}` : ""}
-              </text>
-            )}
           </g>
-        );
-      })}
-      <text x={x(0) - 8} y={outside + 4} textAnchor="end" className="faint">
-        {t("evo.outsideTop", { k: data.top_k })}
-      </text>
-    </svg>
+          {data.periods.map((period, index) => (
+            <line key={period} x1={x(index)} x2={x(index)} y1={top - 8} y2={height - 6} stroke="var(--line)" />
+          ))}
+          {data.trajectories.map((trajectory) => {
+            const ranks = trajectory.points.map((point) => point.rank);
+            const firstRank = ranks[0] ?? null;
+            const lastRank = ranks[last] ?? null;
+            const previousRank = ranks[last - 1] ?? null;
+            const entered = inTop(lastRank) && !inTop(previousRank);
+            const delta = previousRank !== null && lastRank !== null ? previousRank - lastRank : null;
+            const strong = delta === null || Math.abs(delta) >= 5;
+            const color = categoryColor(trajectory.category);
+            const summary = ranks.map((rank) => `#${rank ?? "—"}`).join(" → ");
+            const lineWidth = strong ? 2.6 : 1.3;
+            return (
+              <g
+                key={trajectory.id}
+                className="series"
+                onClick={() => select({ kind: "node", id: trajectory.id })}
+                role="button"
+                aria-label={`${trajectory.name}: ${summary}`}
+              >
+                <title>{`${trajectory.name}: ${summary}`}</title>
+                {ranks.slice(0, -1).map((rank, index) => {
+                  const next = ranks[index + 1];
+                  if (inTop(rank) && inTop(next)) {
+                    return (
+                      <line
+                        key={index}
+                        x1={x(index)}
+                        y1={y(rank)}
+                        x2={x(index + 1)}
+                        y2={y(next)}
+                        stroke={color}
+                        strokeWidth={lineWidth}
+                        strokeLinecap="round"
+                      />
+                    );
+                  }
+                  // Sale del top: trazo corto hacia abajo desde su último puesto.
+                  if (inTop(rank)) {
+                    return (
+                      <line
+                        key={index}
+                        className="stub"
+                        x1={x(index)}
+                        y1={y(rank)}
+                        x2={x(index) + stub}
+                        y2={y(rank) + stub * 0.5}
+                        stroke={color}
+                      />
+                    );
+                  }
+                  // Entra al top: trazo corto que sube hasta su nuevo puesto.
+                  if (inTop(next)) {
+                    return (
+                      <line
+                        key={index}
+                        className="stub"
+                        x1={x(index + 1) - stub}
+                        y1={y(next) + stub * 0.5}
+                        x2={x(index + 1)}
+                        y2={y(next)}
+                        stroke={color}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                {ranks.map((rank, index) =>
+                  inTop(rank) ? <circle key={index} cx={x(index)} cy={y(rank)} r={3.2} fill={color} /> : null,
+                )}
+                {inTop(firstRank) && (
+                  <text x={x(0) - 9} y={y(firstRank) + 4} textAnchor="end">
+                    <tspan className="rank">{firstRank}</tspan> {shorten(trajectory.name)}
+                  </text>
+                )}
+                {inTop(lastRank) && (
+                  <text x={x(last) + 9} y={y(lastRank) + 4} className={strong ? "strong" : undefined}>
+                    <tspan className="rank">{lastRank}</tspan> {shorten(trajectory.name)}
+                    {entered ? (
+                      <tspan className="delta up"> {t("evo.new")}</tspan>
+                    ) : delta ? (
+                      <tspan className={`delta ${delta > 0 ? "up" : "down"}`}>
+                        {" "}
+                        {delta > 0 ? "▲" : "▼"}
+                        {Math.abs(delta)}
+                      </tspan>
+                    ) : null}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      )}
+    </div>
   );
 }
 

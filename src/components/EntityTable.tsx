@@ -70,7 +70,7 @@ export function EntityTable({ network, metric }: { network: NetworkResponse | un
               <th className="num">{t("table.mentions")}</th>
               {METRIC_ORDER.map((item) => (
                 <th key={item} className="num" aria-sort={sortBy === item ? "descending" : "none"}>
-                  <button type="button" onClick={() => setSortBy(item)} title={metricInfo(item, lang).description}>
+                  <button type="button" onClick={() => setSortBy(item)} data-tip={metricInfo(item, lang).description}>
                     {metricLabel(item, lang)}
                     {sortBy === item ? " ↓" : ""}
                   </button>

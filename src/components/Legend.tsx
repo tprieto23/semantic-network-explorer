@@ -13,7 +13,7 @@ export function Legend({ categories }: { categories: string[] }) {
   return (
     <div className="legend" aria-label={t("net.legend")}>
       {ordered.map((code) => (
-        <span className="legend-item" key={code} title={categoryLabel(code, lang)}>
+        <span className="legend-item" key={code} data-tip={categoryLabel(code, lang)}>
           <CategoryDot category={code} />
           {categoryLabel(code, lang, true)}
         </span>

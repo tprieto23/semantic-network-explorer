@@ -7,6 +7,7 @@ import { FilterPanel } from "./components/FilterPanel";
 import { NetworkView } from "./components/NetworkView";
 import { BottomTabs, NavRail, TopBar } from "./components/Shell";
 import { SummaryView } from "./components/SummaryView";
+import { TooltipLayer } from "./components/TooltipLayer";
 import { errorText, useT } from "./i18n";
 import { filterIssues, useFilterStore } from "./state/filters";
 import { useSelectionStore } from "./state/selection";
@@ -24,6 +25,9 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // La barra del navegador móvil toma el color de fondo del tema.
+    const color = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", color);
   }, [theme]);
 
   useEffect(() => {
@@ -74,6 +78,7 @@ export default function App() {
         </div>
       </div>
       <BottomTabs />
+      <TooltipLayer />
     </div>
   );
 }

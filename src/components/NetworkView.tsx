@@ -93,7 +93,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
                 type="button"
                 className="glass-btn round"
                 aria-label={t("filters.resetShort")}
-                title={t("filters.resetShort")}
+                data-tip={t("filters.resetShort")}
                 onClick={resetFilters}
               >
                 <ResetIcon />
@@ -136,7 +136,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
             <span>
               <strong className="num">{formatInt(network.stages.shown.nodes, lang)}</strong> {t("net.entities")}
             </span>
-            <span title={filters.edgeDisplay === "strongest" ? t("net.strongestTitle") : undefined}>
+            <span data-tip={filters.edgeDisplay === "strongest" ? t("net.strongestTitle") : undefined}>
               {drawn && drawn.edges.length < network.edges.length ? (
                 <>
                   <strong className="num">{formatInt(drawn.edges.length, lang)}</strong>{" "}

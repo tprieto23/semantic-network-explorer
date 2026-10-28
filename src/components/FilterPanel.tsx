@@ -69,7 +69,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
       type="button"
       className="round-btn"
       aria-label={t("filters.resetShort")}
-      title={t("filters.resetShort")}
+      data-tip={t("filters.resetShort")}
       disabled={active === 0}
       onClick={reset}
     >
@@ -125,8 +125,9 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                     type="button"
                     className="chip"
                     aria-pressed={active}
-                    // La definición del codebook solo existe en español.
-                    title={lang === "es" ? (category.definition ?? categoryLabel(code, lang)) : categoryLabel(code, lang)}
+                    // La definición del codebook solo existe en español; en inglés, el nombre completo.
+                    data-tip-title={lang === "es" && category.definition ? categoryLabel(code, lang) : undefined}
+                    data-tip={lang === "es" ? (category.definition ?? categoryLabel(code, lang)) : categoryLabel(code, lang)}
                     onClick={() => toggleCategory(code)}
                     style={
                       active
@@ -246,7 +247,7 @@ function ExcludedEntities({
           const entity = known.get(id);
           const name = entity?.name ?? t("filters.excludedUnknown");
           return (
-            <span key={id} className="chip excluded-chip" title={entity?.category ? categoryLabel(entity.category, lang) : undefined}>
+            <span key={id} className="chip excluded-chip" data-tip={entity?.category ? categoryLabel(entity.category, lang) : undefined}>
               {entity?.category && <CategoryDot category={entity.category} />}
               <span className={entity?.name ? undefined : "faint"}>{name}</span>
               <button
@@ -353,7 +354,7 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
                 aria-label={
                   language === "all" ? undefined : `${t("filters.only", { name: languageName(language, lang) })} · ${count}`
                 }
-                title={language === "all" ? undefined : languageName(language, lang)}
+                data-tip={language === "all" ? undefined : languageName(language, lang)}
                 disabled={count === 0 && filters.language !== language}
                 onClick={() => update({ language })}
               >
@@ -423,7 +424,7 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
         <span className="field-label">{t("filters.linkType")}</span>
         <div className="radio-list" role="radiogroup" aria-label={t("filters.linkType")}>
           {Object.entries(linkModes(lang)).map(([mode, info]) => (
-            <label key={mode} title={info.description}>
+            <label key={mode} data-tip={info.description}>
               <input
                 type="radio"
                 name="link-mode"

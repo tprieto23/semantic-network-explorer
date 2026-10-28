@@ -147,7 +147,7 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
           <button
             type="button"
             className="outline-btn"
-            title={t("details.excludeHint")}
+            data-tip={t("details.excludeHint")}
             onClick={() => {
               update({ excludedEntityIds: [...new Set([...filters.excludedEntityIds, node.id])] });
               setNeighborsOnly(false);
@@ -172,7 +172,7 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
                 key={metric}
                 className="metric-card"
                 aria-pressed={filters.metric === metric}
-                title={metricInfo(metric, lang).description}
+                data-tip={metricInfo(metric, lang).description}
                 onClick={() => update({ metric })}
               >
                 <span className="label">{metricLabel(metric, lang)}</span>
@@ -223,7 +223,7 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
                   <button
                     type="button"
                     className="link-row"
-                    title={t("details.evidenceHint")}
+                    data-tip={t("details.evidenceHint")}
                     onClick={() =>
                       select({ kind: "edge", source: edge.source, target: edge.target }, { returnTo: node.id })
                     }
@@ -397,7 +397,7 @@ function Sentences({
           <article className="sentence" key={`${item.document_id}-${item.sentence_id}`}>
             <p>{highlight(item.text, terms, theme)}</p>
             <footer>
-              <span title={item.document_name}>{item.document_name}</span>
+              <span data-tip={item.document_name}>{item.document_name}</span>
               <span className="num">{item.year ?? t("common.noYear")}</span>
             </footer>
           </article>

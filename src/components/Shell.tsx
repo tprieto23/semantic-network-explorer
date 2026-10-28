@@ -24,7 +24,7 @@ export function NavRail() {
   const setTab = useSelectionStore((state) => state.setTab);
   return (
     <nav className="rail" aria-label={t("nav.views")}>
-      <span className="rail-logo" title={t("app.title")}>
+      <span className="rail-logo" data-tip={t("app.title")}>
         <LogoIcon />
       </span>
       {VIEWS.map((view) => (
@@ -158,7 +158,7 @@ export function TopBar({ meta, network }: TopBarProps) {
               type="button"
               aria-pressed={filters.period === period}
               disabled={count === 0}
-              title={
+              data-tip={
                 count === 0
                   ? t("top.periodEmpty")
                   : count !== undefined
