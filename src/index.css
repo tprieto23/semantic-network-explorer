@@ -1291,9 +1291,18 @@ button.insight:hover {
   position: absolute;
   left: 12px;
   top: 12px;
+  /* Deja libre la columna de los controles de zoom. */
+  right: 64px;
   z-index: 4;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  pointer-events: none;
+}
+
+.stage-filters > * {
+  pointer-events: auto;
 }
 
 /* Vidrio: fondo casi transparente con brillo diagonal, desenfoque y reflejo superior. */
@@ -3105,6 +3114,8 @@ button.chip-static:hover {
   .stage-filters {
     left: 10px;
     top: 10px;
+    right: 52px;
+    flex-wrap: nowrap;
   }
 
   .zoom {
@@ -3261,39 +3272,54 @@ button.chip-static:hover {
   stroke-width: 1.2;
 }
 
-/* Vistas guiadas: atajos en la parte superior del panel Explora. */
-.presets {
+/* Vistas guiadas: islitas de vidrio sobre el grafo. */
+.islands {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
 }
 
-.preset {
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--line2);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--tx);
-  font-size: 11.5px;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+.glass-btn.island {
+  height: 32px;
+  padding: 0 13px;
+  font-size: 12.5px;
 }
 
-.preset:hover {
-  border-color: var(--acc);
-  background: var(--acc2);
-}
-
-.preset[aria-pressed="true"] {
-  border-color: transparent;
+.glass-btn.island[aria-pressed="true"] {
   background: var(--sel-bg);
   color: var(--sel-fg);
+  border-color: var(--acc);
   box-shadow:
     var(--sel-shadow),
-    inset 0 0 0 1px var(--sel-border),
+    inset 0 0 0 1px var(--acc),
     inset 0 1px 0 var(--sel-shine);
+}
+
+/* La vista activa lleva un check: el vidrio solo no basta para distinguirla. */
+.glass-btn.island[aria-pressed="true"]::before {
+  content: "✓";
+  color: var(--acc);
+  font-weight: 700;
+}
+
+/* En celular las islitas van en una fila que se desliza de lado. */
+@media (max-width: 640px) {
+  .islands {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 2px 6px;
+  }
+
+  .islands::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass-btn.island {
+    flex: none;
+  }
 }
 
 /* Guía de la primera visita, sobre la red. */
@@ -3412,23 +3438,16 @@ button.chip-static:hover {
   .info-btn,
   .type-only,
   .round-btn,
-  .expand-btn,
-  .preset {
+  .expand-btn {
     position: relative;
   }
 
   .info-btn::after,
   .type-only::after,
-  .round-btn::after,
-  .preset::after {
+  .round-btn::after {
     content: "";
     position: absolute;
     inset: -10px;
-  }
-
-  /* Las vistas guiadas van juntas: solo se agranda en vertical para no pisarse. */
-  .preset::after {
-    inset: -8px 0;
   }
 }
 

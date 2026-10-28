@@ -13,8 +13,7 @@ import {
 } from "../domain/vocabulary";
 import { useT } from "../i18n";
 import type { CategoryPair, Filters } from "../state/filters";
-import { DEFAULT_FILTERS, activeFilterCount, advancedFilterCount, useFilterStore } from "../state/filters";
-import { PRESETS, isPresetActive, presetFilters } from "../domain/presets";
+import { activeFilterCount, advancedFilterCount, useFilterStore } from "../state/filters";
 import { documentsInPeriod, documentsInScope } from "../domain/scope";
 import { useTheme } from "../state/theme";
 import { useUiStore } from "../state/ui";
@@ -42,7 +41,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
   const filters = useFilterStore((state) => state.filters);
   const update = useFilterStore((state) => state.update);
   const reset = useFilterStore((state) => state.reset);
-  const replace = useFilterStore((state) => state.replace);
   const theme = useTheme();
 
   const categories = useMemo(
@@ -119,27 +117,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
         )}
 
         <div className="filters-body">
-          <section className="group">
-            <h3 className="group-title">{t("preset.title")}</h3>
-            <div className="presets" role="group" aria-label={t("preset.title")}>
-              {PRESETS.map((preset) => {
-                const isActive = isPresetActive(preset, filters);
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className="preset"
-                    aria-pressed={isActive}
-                    data-tip={t(preset.description)}
-                    onClick={() => replace(isActive ? { ...DEFAULT_FILTERS, sector: filters.sector } : presetFilters(preset, filters))}
-                  >
-                    {t(preset.label)}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
           <section className="group">
             <div className="group-head">
               <h3 className="group-title">{t("filters.categories")}</h3>

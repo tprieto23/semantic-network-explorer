@@ -10,6 +10,7 @@ import type { Filters } from "../state/filters";
 import { activeFilterCount, useFilterStore } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
 import { useUiStore } from "../state/ui";
+import { GuidedViews } from "./GuidedViews";
 import { FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot, CommunityLegend, Legend } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
@@ -93,8 +94,9 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
           />
         )}
 
-        {filtersCollapsed && (
-          <div className="stage-filters">
+        {/* Arriba a la izquierda: «Explora» (si el panel está cerrado) y las vistas guiadas. */}
+        <div className="stage-filters">
+          {filtersCollapsed && (
             <button
               type="button"
               className="glass-btn"
@@ -105,7 +107,8 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
               {t("filters.heading")}
               {activeFilters > 0 && <span className="badge num">{activeFilters}</span>}
             </button>
-            {activeFilters > 0 && (
+          )}
+          {filtersCollapsed && activeFilters > 0 && (
               <button
                 type="button"
                 className="glass-btn round"
@@ -115,9 +118,9 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
               >
                 <ResetIcon />
               </button>
-            )}
-          </div>
-        )}
+          )}
+          {graph && <GuidedViews />}
+        </div>
 
         <div className="notices">
           {issues.map((issue) => (
