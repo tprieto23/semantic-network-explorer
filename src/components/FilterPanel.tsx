@@ -21,6 +21,7 @@ import { ChevronIcon, FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { DocumentTypeFilter } from "./DocumentTypeFilter";
 import { GlassSelect } from "./GlassSelect";
+import { PresetList } from "./GuidedViews";
 import { InfoTip } from "./InfoTip";
 import { useSwipeToClose } from "./useSwipeToClose";
 import { StageFunnel } from "./StageFunnel";
@@ -117,6 +118,12 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
         )}
 
         <div className="filters-body">
+          {/* En celular las vistas guiadas van aquí; en pantallas grandes, junto al panel. */}
+          <section className="group guided-in-panel">
+            <h3 className="group-title">{t("preset.title")}</h3>
+            <PresetList />
+          </section>
+
           <section className="group">
             <div className="group-head">
               <h3 className="group-title">{t("filters.categories")}</h3>

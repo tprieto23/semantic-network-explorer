@@ -209,11 +209,3 @@ export function BookIcon() {
     </svg>
   );
 }
-
-export function SparkIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 1.8 9.4 6.6 14.2 8 9.4 9.4 8 14.2 6.6 9.4 1.8 8l4.8-1.4L8 1.8Z" />
-    </svg>
-  );
-}

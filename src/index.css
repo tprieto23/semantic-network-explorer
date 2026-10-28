@@ -3475,34 +3475,41 @@ button.chip-static:hover {
   color: var(--acc);
 }
 
-/* Botón «Vistas» de celular: oculto en pantallas grandes. */
-/* Sin posición propia: la lista se ancla al borde izquierdo de la fila de botones. */
-.guided-mobile {
+/* Dentro del panel Explora las vistas solo se muestran en celular. */
+.guided-in-panel {
   display: none;
 }
 
-.guided-mobile .glass-btn.has-active {
-  border-color: var(--acc);
+.guided-in-panel .guided-item {
+  border-color: var(--line2);
 }
 
-.guided-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 5;
-  width: min(280px, calc(100vw - 40px));
-  padding: 6px;
-  border-radius: 16px;
+/* El bloque entra deslizándose desde el panel Explora, del que forma parte. */
+.guided {
+  animation: guided-in 0.34s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
 }
 
-/* En celular el bloque taparía la red: se usa el botón «Vistas» junto a «Explora». */
+@keyframes guided-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guided {
+    animation: backdrop-in 0.15s ease-out backwards;
+  }
+}
+
+/* En celular el bloque taparía la red: las vistas van dentro del panel Explora. */
 @media (max-width: 640px) {
   .guided {
     display: none;
   }
 
-  .guided-mobile {
-    display: block;
+  .guided-in-panel {
+    display: flex;
   }
 }
 
@@ -3978,7 +3985,7 @@ button.chip-static:hover {
 /* Tema claro: los controles que flotan sobre el grafo (claro) pasan a vidrio oscuro para
    separarse del fondo. Se redefinen los tokens del vidrio y del texto dentro de ellos, así
    sus estados (hover, seleccionado) siguen funcionando. */
-:root[data-theme="claro"] :is(.stage-filters .glass-btn, .zoom, .guided, .guided-pop) {
+:root[data-theme="claro"] :is(.stage-filters .glass-btn, .zoom, .guided) {
   --tx: #eef0ea;
   --tx2: #c9cfca;
   --tx3: #a9b0aa;
@@ -4142,15 +4149,10 @@ button.chip-static:hover {
   }
 }
 
-/* Menú, ayuda, guía y lista de vistas: aparecen desde su esquina de origen. */
+/* Menú, ayuda y guía: aparecen desde su esquina de origen. */
 .menu,
 .popover {
   transform-origin: top right;
-  animation: pop-in 0.2s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
-}
-
-.guided-pop {
-  transform-origin: top left;
   animation: pop-in 0.2s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
 }
 
@@ -4213,7 +4215,6 @@ button.chip-static:hover {
   .modal-backdrop > .card,
   .menu,
   .popover,
-  .guided-pop,
   .scroll-view,
   .stage,
   .table-card,
