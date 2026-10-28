@@ -3690,3 +3690,35 @@ button.chip-static:hover {
 .help.warn {
   color: var(--warn);
 }
+
+/* Tema claro: los controles que flotan sobre el grafo (claro) pasan a vidrio oscuro para
+   separarse del fondo. Se redefinen los tokens del vidrio y del texto dentro de ellos, así
+   sus estados (hover, seleccionado) siguen funcionando. */
+:root[data-theme="claro"] :is(.stage-filters .glass-btn, .zoom, .guided, .guided-pop) {
+  --tx: #eef0ea;
+  --tx2: #c9cfca;
+  --tx3: #a9b0aa;
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03));
+  --glass-bg-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.07));
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-shine: rgba(255, 255, 255, 0.22);
+  --sel-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08));
+  --sel-fg: #ffffff;
+  --sel-border: rgba(255, 255, 255, 0.3);
+  --sel-shine: rgba(255, 255, 255, 0.35);
+  --sel-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background:
+    var(--glass-bg),
+    rgba(31, 36, 33, 0.86);
+  color: var(--tx);
+  border-color: var(--glass-border);
+  box-shadow:
+    0 8px 22px rgba(31, 36, 33, 0.24),
+    inset 0 1px 0 var(--glass-shine);
+}
+
+:root[data-theme="claro"] .stage-filters .glass-btn:hover {
+  background:
+    var(--glass-bg-hover),
+    rgba(31, 36, 33, 0.9);
+}

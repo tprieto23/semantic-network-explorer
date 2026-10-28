@@ -201,25 +201,55 @@ function FocusChips({
   });
 }
 
+/** Carga una imagen (el logo) para dibujarla en un lienzo. */
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
 /**
- * Descarga la red como PNG. Las capas de Sigma son varios lienzos (WebGL y 2D): se
- * combinan justo después de dibujar, cuando el lienzo WebGL todavía tiene su contenido.
+ * Descarga la red como PNG, con el logo y el nombre del proyecto como marca de agua.
+ * Las capas de Sigma son varios lienzos (WebGL y 2D): se combinan justo después de
+ * dibujar, cuando el lienzo WebGL todavía tiene su contenido.
  */
-function exportPng(sigma: ReturnType<typeof useSigma>, filename: string) {
+async function exportPng(sigma: ReturnType<typeof useSigma>, filename: string, watermark: string) {
+  const logo = await loadImage("/favicon.svg");
   const container = sigma.getContainer();
   const { width, height } = container.getBoundingClientRect();
   const ratio = window.devicePixelRatio || 1;
+  const styles = getComputedStyle(document.documentElement);
   sigma.once("afterRender", () => {
     const output = document.createElement("canvas");
     output.width = Math.round(width * ratio);
     output.height = Math.round(height * ratio);
     const context = output.getContext("2d");
     if (!context) return;
-    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--graph").trim() || "#ffffff";
+    context.fillStyle = styles.getPropertyValue("--graph").trim() || "#ffffff";
     context.fillRect(0, 0, output.width, output.height);
     container.querySelectorAll("canvas").forEach((layer) => {
       context.drawImage(layer, 0, 0, output.width, output.height);
     });
+
+    // Marca de agua abajo a la derecha: logo y nombre, semitransparentes.
+    context.save();
+    context.scale(ratio, ratio);
+    context.globalAlpha = 0.55;
+    const size = 26;
+    const margin = 16;
+    context.font = `600 12px "DM Sans", system-ui, sans-serif`;
+    const textWidth = context.measureText(watermark).width;
+    const x = width - margin - textWidth;
+    const y = height - margin;
+    if (logo) context.drawImage(logo, x - size - 8, y - size + 7, size, size);
+    context.fillStyle = styles.getPropertyValue("--tx2").trim() || "#5b615d";
+    context.textBaseline = "alphabetic";
+    context.fillText(watermark, x, y);
+    context.restore();
+
     output.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -252,7 +282,7 @@ function ZoomControls() {
         type="button"
         aria-label={t("net.download")}
         data-tip={t("net.download")}
-        onClick={() => exportPng(sigma, `${t("net.filename")}.png`)}
+        onClick={() => void exportPng(sigma, `${t("net.filename")}.png`, t("app.title"))}
       >
         <DownloadIcon />
       </button>
