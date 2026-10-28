@@ -3370,50 +3370,34 @@ button.chip-static:hover {
   color: var(--acc);
 }
 
-/* En celular el bloque sería demasiado grande: fila deslizable bajo la barra superior. */
+/* Botón «Vistas» de celular: oculto en pantallas grandes. */
+/* Sin posición propia: la lista se ancla al borde izquierdo de la fila de botones. */
+.guided-mobile {
+  display: none;
+}
+
+.guided-mobile .glass-btn.has-active {
+  border-color: var(--acc);
+}
+
+.guided-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  width: min(280px, calc(100vw - 40px));
+  padding: 6px;
+  border-radius: 16px;
+}
+
+/* En celular el bloque taparía la red: se usa el botón «Vistas» junto a «Explora». */
 @media (max-width: 640px) {
   .guided {
-    left: 10px;
-    right: 52px;
-    top: 58px;
-    bottom: auto;
-    width: auto;
-    padding: 0;
-    border: 0;
-    background: none;
-    box-shadow: none;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .guided-head {
     display: none;
   }
 
-  .guided-list {
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin: 0;
-    padding: 2px 2px 6px;
-  }
-
-  .guided-list::-webkit-scrollbar {
-    display: none;
-  }
-
-  .guided-item {
-    flex: none;
-    padding: 6px 12px;
-    border: 1px solid var(--glass-border);
-    border-radius: 999px;
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: blur(18px) saturate(1.8);
-    backdrop-filter: blur(18px) saturate(1.8);
-  }
-
-  .guided-item span {
-    display: none;
+  .guided-mobile {
+    display: block;
   }
 }
 

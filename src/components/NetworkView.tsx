@@ -10,7 +10,7 @@ import type { Filters } from "../state/filters";
 import { activeFilterCount, useFilterStore } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
 import { useUiStore } from "../state/ui";
-import { GuidedViews } from "./GuidedViews";
+import { GuidedViews, GuidedViewsButton } from "./GuidedViews";
 import { FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot, CommunityLegend, Legend } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
@@ -119,6 +119,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
                 <ResetIcon />
               </button>
           )}
+          {graph && <GuidedViewsButton />}
         </div>
 
         {graph && <GuidedViews />}
