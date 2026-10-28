@@ -12,20 +12,41 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
     />
     <style>
-      /* Solo para el loader de arranque; el resto de los estilos llega con la app. */
+      /* Solo para el loader de arranque (mismo diseño que src/components/Loader.tsx): nodos
+         y pulsos HTML animados con transform y opacity, que el compositor mueve aunque el
+         navegador esté ocupado cargando la app. */
       html, body { margin: 0; height: 100%; background: #1b1f1e; }
       @media (prefers-color-scheme: light) { html, body { background: #e6e4dd; } }
       .boot-loader { height: 100vh; display: grid; place-items: center; }
-      .bn { transform-box: fill-box; transform-origin: center; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
-      .bn.n1 { animation-name: bn1; } .bn.n2 { animation-name: bn2; } .bn.n3 { animation-name: bn3; }
-      .bp { stroke-width: 18; stroke-linecap: round; stroke-dasharray: 34 200; stroke-dashoffset: 34; opacity: 0; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
-      .bp.p1 { animation-name: bp1; } .bp.p2 { animation-name: bp2; }
-      @keyframes bn1 { 0% { transform: scale(1) } 14.58% { transform: scale(1.16) } 29.17%, 100% { transform: scale(1) } }
-      @keyframes bn2 { 0%, 33.33% { transform: scale(1) } 45.83% { transform: scale(1.16) } 58.33%, 100% { transform: scale(1) } }
-      @keyframes bn3 { 0%, 64.58% { transform: scale(1) } 77.08% { transform: scale(1.16) } 91.67%, 100% { transform: scale(1) } }
-      @keyframes bp1 { 0%, 8.33% { stroke-dashoffset: 34; opacity: 0 } 12.5%, 37.5% { opacity: 1 } 41.67%, 100% { stroke-dashoffset: -100; opacity: 0 } }
-      @keyframes bp2 { 0%, 43.75% { stroke-dashoffset: 34; opacity: 0 } 47.92%, 66.67% { opacity: 1 } 70.83%, 100% { stroke-dashoffset: -100; opacity: 0 } }
-      @media (prefers-reduced-motion: reduce) { .bn, .bp { animation: none; } }
+      .bm { position: relative; width: 96px; height: 96px; }
+      .bm svg { position: absolute; inset: 0; }
+      .bd { position: absolute; border-radius: 50%; will-change: transform, opacity; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+      .bd1 { left: 9px; top: 35.3px; width: 28.8px; height: 28.8px; background: #6BC8CC; animation-name: bd1; }
+      .bd2 { left: 59.3px; top: 25.3px; width: 21.6px; height: 21.6px; background: #8BCB2E; animation-name: bd2; }
+      .bd3 { left: 49.9px; top: 58.4px; width: 13.2px; height: 13.2px; background: #858DCC; animation-name: bd3; }
+      .bt { position: absolute; height: 0; transform-origin: 0 50%; }
+      .bt1 { left: 23.4px; top: 49.7px; width: 48.6px; transform: rotate(-16.22deg); }
+      .bt2 { left: 70.1px; top: 36.1px; width: 31.9px; transform: rotate(115.2deg); }
+      .br { position: absolute; inset: 0; will-change: transform, opacity; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+      .bt1 .br { animation-name: br1; } .bt2 .br { animation-name: br2; }
+      .bs { position: absolute; left: 0; top: 0; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%); }
+      .bt1 .bs { background: radial-gradient(circle, #fff 0 22%, #8BCB2E 45%, transparent 72%); }
+      .bt2 .bs { background: radial-gradient(circle, #fff 0 22%, #858DCC 45%, transparent 72%); }
+      .bd::after { content: ""; position: absolute; inset: -22%; border-radius: 50%; background: inherit; opacity: 0; filter: blur(2px); animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+      .bd1::after { animation-name: bh1; } .bd2::after { animation-name: bh2; } .bd3::after { animation-name: bh3; }
+      @keyframes bd1 { 0%, 30%, 100% { transform: scale(1) } 14% { transform: scale(1.28) } }
+      @keyframes bd2 { 0%, 33%, 60%, 100% { transform: scale(1) } 46% { transform: scale(1.28) } }
+      @keyframes bd3 { 0%, 64%, 92%, 100% { transform: scale(1) } 77% { transform: scale(1.34) } }
+      @keyframes bh1 { 0%, 30%, 100% { opacity: 0 } 14% { opacity: .45 } }
+      @keyframes bh2 { 0%, 33%, 60%, 100% { opacity: 0 } 46% { opacity: .45 } }
+      @keyframes bh3 { 0%, 64%, 92%, 100% { opacity: 0 } 77% { opacity: .45 } }
+      @keyframes br1 { 0%, 12% { transform: translateX(0); opacity: 0 } 16%, 38% { opacity: 1 } 44%, 100% { transform: translateX(100%); opacity: 0 } }
+      @keyframes br2 { 0%, 44% { transform: translateX(0); opacity: 0 } 48%, 70% { opacity: 1 } 76%, 100% { transform: translateX(100%); opacity: 0 } }
+      @keyframes bbreathe { 0%, 100% { opacity: 0 } 50% { opacity: .5 } }
+      @media (prefers-reduced-motion: reduce) {
+        .bd { animation: none; } .bd::after { animation: bbreathe 2.4s ease-in-out infinite; }
+        .bd2::after { animation-delay: .4s; } .bd3::after { animation-delay: .8s; } .br { display: none; }
+      }
     </style>
     <title>Redes semánticas · Madre de Dios</title>
   </head>
@@ -33,20 +54,18 @@
     <div id="root">
       <!-- Loader de arranque: se ve hasta que React monta la app (src/components/Loader.tsx). -->
       <div class="boot-loader" role="status" aria-label="Cargando">
-        <svg width="96" height="96" viewBox="0 0 320 320" fill="none" aria-hidden="true">
-          <defs>
-            <linearGradient id="boot-a" x1="106" y1="222" x2="184" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#6BC8CC" /><stop offset="1" stop-color="#8BCB2E" /></linearGradient>
-            <linearGradient id="boot-b" x1="184" y1="80" x2="220" y2="180" gradientUnits="userSpaceOnUse"><stop stop-color="#8BCB2E" /><stop offset="1" stop-color="#858DCC" /></linearGradient>
-          </defs>
-          <g transform="rotate(45 160 160)">
-            <g stroke-width="9" stroke-linecap="round"><path d="M106 222 184 80" stroke="url(#boot-a)" /><path d="M184 80 220 180" stroke="url(#boot-b)" /></g>
-            <path class="bp p1" d="M106 222 184 80" pathLength="100" stroke="url(#boot-a)" />
-            <path class="bp p2" d="M184 80 220 180" pathLength="100" stroke="url(#boot-b)" />
-            <circle class="bn n1" cx="106" cy="222" r="48" fill="#6BC8CC" />
-            <circle class="bn n2" cx="184" cy="80" r="36" fill="#8BCB2E" />
-            <circle class="bn n3" cx="220" cy="180" r="22" fill="#858DCC" />
-          </g>
-        </svg>
+        <div class="bm" aria-hidden="true">
+          <svg width="96" height="96" viewBox="0 0 320 320" fill="none">
+            <defs>
+              <linearGradient id="boot-a" x1="106" y1="222" x2="184" y2="80" gradientUnits="userSpaceOnUse"><stop stop-color="#6BC8CC" /><stop offset="1" stop-color="#8BCB2E" /></linearGradient>
+              <linearGradient id="boot-b" x1="184" y1="80" x2="220" y2="180" gradientUnits="userSpaceOnUse"><stop stop-color="#8BCB2E" /><stop offset="1" stop-color="#858DCC" /></linearGradient>
+            </defs>
+            <g transform="rotate(45 160 160)" stroke-width="9" stroke-linecap="round"><path d="M106 222 184 80" stroke="url(#boot-a)" /><path d="M184 80 220 180" stroke="url(#boot-b)" /></g>
+          </svg>
+          <span class="bt bt1"><span class="br"><span class="bs"></span></span></span>
+          <span class="bt bt2"><span class="br"><span class="bs"></span></span></span>
+          <span class="bd bd1"></span><span class="bd bd2"></span><span class="bd bd3"></span>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
