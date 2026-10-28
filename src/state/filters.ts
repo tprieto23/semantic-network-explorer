@@ -14,7 +14,7 @@ export type CategoryPair = [CategoryCode, CategoryCode];
 
 export type SectorFilter = "Agroforestry" | "all";
 
-/** "only": solo documentos de ese tipo; "exclude": todos menos ese tipo. */
+/** "only": solo documentos de esos tipos; "exclude": todos menos esos tipos. */
 export type DocumentTypeMode = "only" | "exclude";
 
 /** Qué links se dibujan; no cambia lo que se calcula en la API. */
@@ -26,8 +26,8 @@ export interface Filters {
   period: PeriodId;
   incubator: number | "all";
   language: string;
-  /** "all" = todos los tipos de documento. */
-  documentType: string;
+  /** Vacío = todos los tipos de documento. */
+  documentTypes: string[];
   documentTypeMode: DocumentTypeMode;
   /** Vacío = todos los documentos listos. */
   documentIds: string[];
@@ -50,7 +50,7 @@ export const DEFAULT_FILTERS: Filters = {
   period: "all",
   incubator: "all",
   language: "all",
-  documentType: "all",
+  documentTypes: [],
   documentTypeMode: "only",
   documentIds: [],
   categories: [],
@@ -105,10 +105,9 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.period !== DEFAULT_FILTERS.period) params.set("period", filters.period);
   if (filters.incubator !== "all") params.set("inc", String(filters.incubator));
   if (filters.language !== "all") params.set("lang", filters.language);
-  if (filters.documentType !== "all") {
-    params.set("dtype", filters.documentType);
-    if (filters.documentTypeMode === "exclude") params.set("dmode", "exclude");
-  }
+  // Un parámetro por tipo: los nombres pueden tener comas.
+  filters.documentTypes.forEach((type) => params.append("dtype", type));
+  if (filters.documentTypes.length && filters.documentTypeMode === "exclude") params.set("dmode", "exclude");
   if (filters.documentIds.length) params.set("docs", filters.documentIds.join(","));
   if (filters.categories.length) params.set("cats", filters.categories.join(","));
   if (filters.linkMode !== DEFAULT_FILTERS.linkMode) params.set("links", filters.linkMode);
@@ -141,16 +140,17 @@ export function filtersFromSearch(search: string): Filters {
     );
   const incubator = Number.parseInt(params.get("inc") ?? "", 10);
   const minWeight = Number.parseFloat(params.get("minw") ?? "");
-  const documentType = params.get("dtype")?.trim() || "all";
+  const documentTypes = [...new Set(params.getAll("dtype").map((type) => type.trim()).filter(Boolean))].sort();
 
   return {
     sector: oneOf(params.get("sector"), SECTORS, DEFAULT_FILTERS.sector),
     period: oneOf(params.get("period"), PERIODS, DEFAULT_FILTERS.period),
     incubator: incubator >= 1 && incubator <= 8 ? incubator : "all",
     language: params.get("lang")?.trim().toLowerCase() || "all",
-    documentType,
-    documentTypeMode:
-      documentType === "all" ? "only" : oneOf(params.get("dmode"), ["only", "exclude"] as const, "only"),
+    documentTypes,
+    documentTypeMode: documentTypes.length
+      ? oneOf(params.get("dmode"), ["only", "exclude"] as const, "only")
+      : "only",
     documentIds: (params.get("docs") ?? "").split(",").filter(Boolean),
     categories,
     linkMode: oneOf(params.get("links"), LINK_MODES, DEFAULT_FILTERS.linkMode),
@@ -170,7 +170,7 @@ function sharedRequest(filters: Filters) {
     productive_sector: filters.sector,
     incubator_number: filters.incubator,
     language: filters.language,
-    document_type: filters.documentType === "all" ? null : filters.documentType,
+    document_types: filters.documentTypes.length ? filters.documentTypes : null,
     document_type_mode: filters.documentTypeMode,
     document_ids: filters.documentIds.length ? filters.documentIds : null,
     categories: filters.categories.length ? filters.categories : null,
@@ -192,15 +192,36 @@ export function toCompareRequest(filters: Filters, topK = 15): CompareRequest {
   return { ...sharedRequest(filters), periods: [...COMPARED_PERIODS], top_k: topK };
 }
 
-/** Cuántos filtros difieren de sus valores por defecto (cada lista cuenta como uno). */
-export function activeFilterCount(filters: Filters): number {
-  // El modo del tipo de documento es parte del mismo filtro que el tipo.
-  const keys = (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => key !== "documentTypeMode");
+function countChanged(filters: Filters, keys: (keyof Filters)[]): number {
   return keys.filter((key) => {
     const value = filters[key];
     const fallback = DEFAULT_FILTERS[key];
     return Array.isArray(value) ? value.length > 0 : value !== fallback;
   }).length;
+}
+
+/** Cuántos filtros difieren de sus valores por defecto (cada lista cuenta como uno). */
+export function activeFilterCount(filters: Filters): number {
+  // El modo del tipo de documento es parte del mismo filtro que el tipo.
+  return countChanged(
+    filters,
+    (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => key !== "documentTypeMode"),
+  );
+}
+
+/** Filtros de la sección «Filtros avanzados» que están activos (los pares van con el tipo de link). */
+export function advancedFilterCount(filters: Filters): number {
+  return countChanged(filters, [
+    "sector",
+    "incubator",
+    "language",
+    "documentTypes",
+    "documentIds",
+    "linkMode",
+    "minDocuments",
+    "weighting",
+    "minWeight",
+  ]);
 }
 
 /** Problemas que se pueden detectar antes de llamar a la API, como claves de texto. */

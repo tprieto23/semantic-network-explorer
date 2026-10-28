@@ -690,6 +690,233 @@ div.wide-only {
   background: var(--surf2);
 }
 
+/* Select propio (GlassSelect): botón como los campos y desplegable de vidrio. */
+.gsel-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  color: var(--tx);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.gsel-trigger:hover {
+  border-color: var(--tx3);
+}
+
+.gsel-trigger[aria-expanded="true"] {
+  border-color: var(--acc);
+}
+
+.gsel-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gsel-caret {
+  flex: none;
+  color: var(--tx3);
+  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.gsel-trigger[aria-expanded="true"] .gsel-caret {
+  transform: rotate(180deg);
+}
+
+.gsel-list {
+  position: fixed;
+  z-index: 60;
+  width: max-content;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 14px;
+  /* Vidrio con una base del tema: la lista va sobre contenido variado y debe leerse. */
+  background:
+    var(--glass-bg),
+    color-mix(in srgb, var(--surf) 62%, transparent);
+  color: var(--tx);
+  font-size: 13px;
+  animation: gsel-in 0.14s ease-out;
+}
+
+.gsel-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@keyframes gsel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.gsel-group {
+  padding: 8px 10px 4px;
+  color: var(--tx3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gsel-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.gsel-option.active {
+  background: var(--glass-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--glass-border);
+}
+
+.gsel-option[aria-selected="true"] {
+  font-weight: 600;
+}
+
+.gsel-check {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  color: var(--acc);
+}
+
+.gsel-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gsel-option .gsel-hint {
+  padding-left: 12px;
+}
+
+.gsel-hint {
+  color: var(--tx3);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsel-list {
+    animation: none;
+  }
+}
+
+/* Lista de casillas de tipos de documento (DocumentTypeFilter), en el mismo vidrio. */
+.type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.type-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 4px 0 8px;
+  border-radius: 9px;
+}
+
+.type-row > label,
+.type-row.type-all {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  cursor: pointer;
+}
+
+.type-row.type-all {
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--glass-border);
+  border-radius: 9px 9px 0 0;
+  font-weight: 600;
+}
+
+.type-row:hover,
+.type-row:focus-within {
+  background: var(--glass-bg-hover);
+}
+
+.type-row input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--acc);
+  cursor: pointer;
+}
+
+.type-name {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* Sin documentos con el resto de los filtros: se ve atenuado. */
+.type-row.empty .type-name,
+.type-row.empty .gsel-hint {
+  opacity: 0.45;
+}
+
+.type-only {
+  flex: none;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg);
+  color: var(--tx);
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.type-row:hover .type-only:not(:disabled),
+.type-row:focus-within .type-only:not(:disabled),
+.type-only:focus-visible {
+  opacity: 1;
+}
+
+.type-only:hover {
+  background: var(--glass-bg-hover);
+}
+
+.type-only:disabled {
+  cursor: default;
+}
+
+/* En pantallas táctiles no hay hover: «solo» queda visible. */
+@media (hover: none) {
+  .type-only:not(:disabled) {
+    opacity: 1;
+  }
+}
+
+.segmented button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
 .segmented {
   display: grid;
   grid-auto-flow: column;
@@ -791,25 +1018,67 @@ div.wide-only {
   font-weight: 400;
 }
 
+/* «Filtros avanzados»: botón a lo ancho que despliega la sección. */
 .disclosure {
-  border: 1px dashed var(--line2);
-  border-radius: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  background: var(--surf2);
+  overflow: hidden;
+  /* En la columna flexible del panel, overflow: hidden lo dejaría encogerse hasta cero. */
+  flex: none;
+  transition: border-color 0.15s;
 }
 
 .disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 12px 0 13px;
   list-style: none;
   cursor: pointer;
-  padding: 7px 12px;
-  color: var(--tx2);
-  text-align: center;
+  color: var(--tx);
+  font-weight: 600;
+  transition: background 0.15s;
 }
 
 .disclosure > summary::-webkit-details-marker {
   display: none;
 }
 
+.disclosure:hover,
+.disclosure[open] {
+  border-color: var(--acc);
+}
+
+.disclosure > summary:hover {
+  background: var(--acc2);
+}
+
+.disclosure > summary:focus-visible {
+  outline-offset: -2px;
+}
+
+.disclosure-title {
+  flex: 1;
+}
+
+.disclosure > summary .badge {
+  margin: 0;
+}
+
+.disclosure-caret {
+  flex: none;
+  color: var(--tx2);
+  transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.disclosure[open] .disclosure-caret {
+  transform: rotate(180deg);
+}
+
 .disclosure[open] > summary {
-  border-bottom: 1px dashed var(--line2);
+  border-bottom: 1px solid var(--line2);
 }
 
 .disclosure-body {

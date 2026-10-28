@@ -31,7 +31,7 @@ export interface EvidenceParams {
   period: PeriodId;
   incubatorNumber: number | "all";
   language: string;
-  documentType: string;
+  documentTypes: string[];
   documentTypeMode: "only" | "exclude";
   documentIds: string[];
   limit?: number;
@@ -95,8 +95,8 @@ export const explorerApi = {
       productive_sector: params.sector,
       limit: String(params.limit ?? 50),
     });
-    if (params.documentType !== "all") {
-      search.set("document_type", params.documentType);
+    if (params.documentTypes.length) {
+      params.documentTypes.forEach((type) => search.append("document_types", type));
       search.set("document_type_mode", params.documentTypeMode);
     }
     params.documentIds.forEach((id) => search.append("document_ids", id));

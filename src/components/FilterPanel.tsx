@@ -13,12 +13,14 @@ import {
 } from "../domain/vocabulary";
 import { useT } from "../i18n";
 import type { CategoryPair, Filters } from "../state/filters";
-import { activeFilterCount, useFilterStore } from "../state/filters";
-import { documentsInScope } from "../domain/scope";
+import { activeFilterCount, advancedFilterCount, useFilterStore } from "../state/filters";
+import { documentsInPeriod, documentsInScope } from "../domain/scope";
 import { useTheme } from "../state/theme";
 import { useUiStore } from "../state/ui";
-import { ChevronIcon, ResetIcon } from "./icons";
+import { ChevronIcon, FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot } from "./Legend";
+import { DocumentTypeFilter } from "./DocumentTypeFilter";
+import { GlassSelect } from "./GlassSelect";
 import { StageFunnel } from "./StageFunnel";
 
 interface FilterPanelProps {
@@ -50,6 +52,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
   const selectedCodes: CategoryCode[] = filters.categories.length ? filters.categories : allCodes;
   const allSelected = filters.categories.length === 0;
   const active = activeFilterCount(filters);
+  const advancedCount = advancedFilterCount(filters);
   const activeLabel = active === 1 ? t("filters.activeOne") : t("filters.active", { n: active });
 
   function toggleCategory(code: CategoryCode) {
@@ -140,6 +143,20 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
             </div>
           </section>
 
+          <details className="disclosure" open={advancedCount > 0 || undefined}>
+            <summary>
+              <FilterIcon />
+              <span className="disclosure-title">{t("filters.advanced")}</span>
+              {advancedCount > 0 && <span className="badge num">{advancedCount}</span>}
+              <svg className="disclosure-caret" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <path d="m3 4.5 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <div className="disclosure-body">
+              <AdvancedFilters meta={meta} filters={filters} update={update} selectedCodes={selectedCodes} />
+            </div>
+          </details>
+
           {filters.excludedEntityIds.length > 0 && (
             <ExcludedEntities network={network} ids={filters.excludedEntityIds} update={update} />
           )}
@@ -148,18 +165,16 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
             <h3 className="group-title">{t("filters.importance")}</h3>
             <div className="field">
               <label htmlFor="metric">{t("filters.sizeBy")}</label>
-              <select
+              <GlassSelect
                 id="metric"
-                className="select"
                 value={filters.metric}
-                onChange={(event) => update({ metric: event.target.value as Filters["metric"] })}
-              >
-                {METRIC_ORDER.map((metric) => (
-                  <option key={metric} value={metric}>
-                    {metricInfo(metric, lang).label} · {metricInfo(metric, lang).hint}
-                  </option>
-                ))}
-              </select>
+                onChange={(metric) => update({ metric })}
+                options={METRIC_ORDER.map((metric) => ({
+                  value: metric,
+                  label: metricInfo(metric, lang).label,
+                  hint: metricInfo(metric, lang).hint,
+                }))}
+              />
               <p className="help">{metricInfo(filters.metric, lang).description}</p>
             </div>
             <div className="field">
@@ -197,17 +212,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
             </div>
           </section>
 
-          <details
-            className="disclosure"
-            open={
-              filters.linkMode !== "any" || filters.language !== "all" || filters.documentType !== "all" || undefined
-            }
-          >
-            <summary>{t("filters.advanced")}</summary>
-            <div className="disclosure-body">
-              <AdvancedFilters meta={meta} filters={filters} update={update} selectedCodes={selectedCodes} />
-            </div>
-          </details>
 
           {network && (
             <StageFunnel stages={network.stages} minDocuments={filters.minDocuments} minWeight={filters.minWeight} />
@@ -270,48 +274,6 @@ function languageName(code: string, lang: string): string {
   }
 }
 
-/** El valor del select codifica modo y tipo: "all", "only:<tipo>" o "exclude:<tipo>". */
-function DocumentTypeSelect({ meta, filters, update }: Pick<AdvancedFiltersProps, "meta" | "filters" | "update">) {
-  const { t, lang } = useT();
-  const types = meta?.document_types ?? [];
-  // Un tipo que llega por la URL y ya no está en los datos sigue visible para poder quitarlo.
-  const missing = filters.documentType !== "all" && !types.some((type) => type.name === filters.documentType);
-  const options = missing ? [...types, { name: filters.documentType, document_count: 0 }] : types;
-  const value = filters.documentType === "all" ? "all" : `${filters.documentTypeMode}:${filters.documentType}`;
-
-  function change(next: string) {
-    if (next === "all") return update({ documentType: "all", documentTypeMode: "only" });
-    const separator = next.indexOf(":");
-    update({
-      documentTypeMode: next.slice(0, separator) === "exclude" ? "exclude" : "only",
-      documentType: next.slice(separator + 1),
-    });
-  }
-
-  return (
-    <div className="field">
-      <label htmlFor="document-type">{t("filters.documentType")}</label>
-      <select id="document-type" className="select" value={value} onChange={(event) => change(event.target.value)}>
-        <option value="all">{t("filters.allTypes")}</option>
-        <optgroup label={t("filters.typeOnlyGroup")}>
-          {options.map((type) => (
-            <option key={type.name} value={`only:${type.name}`}>
-              {t("filters.only", { name: type.name })} · {t("common.docs", { n: formatInt(type.document_count, lang) })}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label={t("filters.typeExcludeGroup")}>
-          {options.map((type) => (
-            <option key={type.name} value={`exclude:${type.name}`}>
-              {t("filters.typeExclude", { name: type.name })}
-            </option>
-          ))}
-        </optgroup>
-      </select>
-    </div>
-  );
-}
-
 interface AdvancedFiltersProps {
   meta: ExplorerMeta | undefined;
   filters: Filters;
@@ -328,6 +290,17 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
     document.name.toLowerCase().includes(docQuery.trim().toLowerCase()),
   );
   const weightings = edgeWeightings(lang);
+  // Documentos por idioma con el resto de los filtros (período incluido), para el control de idioma.
+  const languageCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!meta) return counts;
+    const documents = documentsInPeriod(meta, { ...filters, language: "all" }, filters.period);
+    counts.set("all", documents.length);
+    documents.forEach((document) => {
+      if (document.language) counts.set(document.language, (counts.get(document.language) ?? 0) + 1);
+    });
+    return counts;
+  }, [meta, filters]);
 
   const possiblePairs = useMemo(() => {
     const pairs: CategoryPair[] = [];
@@ -355,53 +328,58 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
     <>
       <div className="field">
         <label htmlFor="sector">{t("filters.sector")}</label>
-        <select
+        <GlassSelect
           id="sector"
-          className="select"
           value={filters.sector}
-          onChange={(event) => update({ sector: event.target.value as Filters["sector"], documentIds: [] })}
-        >
-          <option value="Agroforestry">{t("filters.sectorAgro")}</option>
-          <option value="all">{t("filters.sectorAll")}</option>
-        </select>
+          onChange={(sector) => update({ sector, documentIds: [] })}
+          options={[
+            { value: "Agroforestry", label: t("filters.sectorAgro") },
+            { value: "all", label: t("filters.sectorAll") },
+          ]}
+        />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 8 }}>
-        <div className="field">
-          <label htmlFor="incubator">{t("filters.incubator")}</label>
-          <select
-            id="incubator"
-            className="select"
-            value={String(filters.incubator)}
-            onChange={(event) =>
-              update({ incubator: event.target.value === "all" ? "all" : Number(event.target.value) })
-            }
-          >
-            <option value="all">{t("filters.allIncubators")}</option>
-            {(meta?.incubators ?? []).map((incubator) => (
-              <option key={incubator} value={incubator}>
-                {incubator}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="language">{t("filters.language")}</label>
-          <select
-            id="language"
-            className="select"
-            value={filters.language}
-            onChange={(event) => update({ language: event.target.value })}
-          >
-            <option value="all">{t("filters.allLanguages")}</option>
-            {(meta?.languages ?? []).map((language) => (
-              <option key={language} value={language}>
-                {t("filters.only", { name: languageName(language, lang) })}
-              </option>
-            ))}
-          </select>
+      <div className="field">
+        <span className="field-label" id="language-label">
+          {t("filters.language")}
+        </span>
+        <div className="segmented" role="group" aria-labelledby="language-label">
+          {["all", ...(meta?.languages ?? [])].map((language) => {
+            const count = languageCounts.get(language) ?? 0;
+            return (
+              <button
+                key={language}
+                type="button"
+                aria-pressed={filters.language === language}
+                aria-label={
+                  language === "all" ? undefined : `${t("filters.only", { name: languageName(language, lang) })} · ${count}`
+                }
+                title={language === "all" ? undefined : languageName(language, lang)}
+                disabled={count === 0 && filters.language !== language}
+                onClick={() => update({ language })}
+              >
+                {language === "all" ? t("filters.allLanguages") : language.toUpperCase()}
+                <span className="count num">{formatInt(count, lang)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
-      <DocumentTypeSelect meta={meta} filters={filters} update={update} />
+      <div className="field">
+        <label htmlFor="document-type">{t("filters.documentType")}</label>
+        <DocumentTypeFilter meta={meta} filters={filters} update={update} />
+      </div>
+      <div className="field">
+        <label htmlFor="incubator">{t("filters.incubator")}</label>
+        <GlassSelect
+          id="incubator"
+          value={String(filters.incubator)}
+          onChange={(incubator) => update({ incubator: incubator === "all" ? "all" : Number(incubator) })}
+          options={[
+            { value: "all", label: t("filters.allIncubators") },
+            ...(meta?.incubators ?? []).map((incubator) => ({ value: String(incubator), label: String(incubator) })),
+          ]}
+        />
+      </div>
 
       <div className="field">
         <button type="button" className="text-btn" style={{ textAlign: "left" }} onClick={() => setShowDocs(!showDocs)}>
@@ -498,18 +476,15 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
 
       <div className="field">
         <label htmlFor="weighting">{t("filters.weighting")}</label>
-        <select
+        <GlassSelect
           id="weighting"
-          className="select"
           value={filters.weighting}
-          onChange={(event) => update({ weighting: event.target.value as Filters["weighting"] })}
-        >
-          {Object.entries(weightings).map(([value, info]) => (
-            <option key={value} value={value}>
-              {info.label}
-            </option>
-          ))}
-        </select>
+          onChange={(weighting) => update({ weighting })}
+          options={(Object.keys(weightings) as Filters["weighting"][]).map((value) => ({
+            value,
+            label: weightings[value].label,
+          }))}
+        />
         <p className="help">{weightings[filters.weighting].description}</p>
       </div>
       <div className="field">

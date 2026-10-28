@@ -311,7 +311,7 @@ function EdgeDetails({
     period: filters.period,
     incubatorNumber: filters.incubator,
     language: filters.language,
-    documentType: filters.documentType,
+    documentTypes: filters.documentTypes,
     documentTypeMode: filters.documentTypeMode,
     documentIds: filters.documentIds,
   };

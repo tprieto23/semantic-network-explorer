@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FILTERS,
   activeFilterCount,
+  advancedFilterCount,
   filterIssues,
   filtersFromSearch,
   filtersToSearch,
@@ -21,7 +22,7 @@ describe("URL serialization", () => {
       period: "2024-2026",
       incubator: 3,
       language: "es",
-      documentType: "WA SAM Hub",
+      documentTypes: ["Other", "WA SAM Hub"],
       documentTypeMode: "exclude",
       documentIds: ["d1", "d2"],
       categories: ["CHAR", "PRAC", "RUL"],
@@ -64,13 +65,13 @@ describe("API requests", () => {
     expect(request.category_pairs).toBeNull();
     expect(request.top_n).toBe(150);
     expect(request.productive_sector).toBe("Agroforestry");
-    expect(request.document_type).toBeNull();
+    expect(request.document_types).toBeNull();
   });
 
-  it("sends the document type with its mode", () => {
-    const request = toNetworkRequest({ ...DEFAULT_FILTERS, documentType: "Other", documentTypeMode: "exclude" });
+  it("sends the document types with their mode", () => {
+    const request = toNetworkRequest({ ...DEFAULT_FILTERS, documentTypes: ["Other"], documentTypeMode: "exclude" });
 
-    expect(request.document_type).toBe("Other");
+    expect(request.document_types).toEqual(["Other"]);
     expect(request.document_type_mode).toBe("exclude");
   });
 
@@ -87,7 +88,19 @@ describe("document type in the URL", () => {
   it("ignores the mode without a type and counts type and mode as one filter", () => {
     expect(filtersFromSearch("?dmode=exclude").documentTypeMode).toBe("only");
     expect(filtersFromSearch("?dtype=Other&dmode=magic").documentTypeMode).toBe("only");
-    expect(activeFilterCount({ ...DEFAULT_FILTERS, documentType: "Other", documentTypeMode: "exclude" })).toBe(1);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, documentTypes: ["Other"], documentTypeMode: "exclude" })).toBe(1);
+    // Los enlaces del selector anterior («Solo X» / «Excluir X») se siguen leyendo.
+    expect(filtersFromSearch("?dtype=WA+SAM+Hub&dmode=exclude")).toMatchObject({
+      documentTypes: ["WA SAM Hub"],
+      documentTypeMode: "exclude",
+    });
+  });
+});
+
+describe("advancedFilterCount", () => {
+  it("counts only the filters inside the advanced section", () => {
+    expect(advancedFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(advancedFilterCount({ ...DEFAULT_FILTERS, language: "es", documentTypes: ["Other"], topN: 50 })).toBe(2);
   });
 });
 

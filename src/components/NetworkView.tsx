@@ -331,12 +331,12 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
       apply: () => update({ language: "all" }),
     });
   }
-  if (filters.documentType !== "all") {
+  if (filters.documentTypes.length) {
     options.push({
       label: t("net.optDocumentType"),
-      from: `${filters.documentTypeMode === "exclude" ? "≠ " : ""}${filters.documentType}`,
+      from: `${filters.documentTypeMode === "exclude" ? "≠ " : ""}${filters.documentTypes.join(", ")}`,
       to: t("net.optAll"),
-      apply: () => update({ documentType: "all", documentTypeMode: "only" }),
+      apply: () => update({ documentTypes: [], documentTypeMode: "only" }),
     });
   }
   if (filters.period !== "all") {
