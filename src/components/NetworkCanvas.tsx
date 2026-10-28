@@ -10,7 +10,8 @@ import type { Selection } from "../state/selection";
 import { useSelectionStore } from "../state/selection";
 import type { Theme } from "../state/theme";
 import { useTheme } from "../state/theme";
-import { DownloadIcon, HomeIcon } from "./icons";
+import { DownloadIcon, HomeIcon, LinkIcon } from "./icons";
+import { useCopyLink } from "./useCopyLink";
 
 interface CanvasProps {
   graph: ExplorerGraph;
@@ -266,6 +267,7 @@ async function exportPng(sigma: ReturnType<typeof useSigma>, filename: string, w
 function ZoomControls() {
   const { t } = useT();
   const sigma = useSigma();
+  const copyLink = useCopyLink();
   const { zoomIn, zoomOut, reset } = useCamera({ duration: 300, factor: 1.5 });
   return (
     <div className="zoom" role="group" aria-label={t("net.zoom")}>
@@ -277,6 +279,9 @@ function ZoomControls() {
       </button>
       <button type="button" aria-label={t("net.fit")} onClick={() => reset()}>
         <HomeIcon />
+      </button>
+      <button type="button" aria-label={t("top.copyLink")} data-tip={t("top.copyLink")} onClick={() => void copyLink()}>
+        <LinkIcon />
       </button>
       <button
         type="button"

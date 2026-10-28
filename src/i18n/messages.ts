@@ -224,6 +224,8 @@ const es = {
   "net.optApply": "aplicar",
 
   "details.aria": "Detalle",
+  "details.copyLink": "Copiar enlace",
+  "details.copyLinkHint": "Copia un enlace que abre la red con esta entidad seleccionada",
   "details.ariaOf": "Detalle de {name}",
   "details.gone": "La selección ya no está en la red filtrada.",
   "details.mentions": "{m} menciones · {d} docs",
@@ -559,6 +561,8 @@ const en: Record<MessageKey, string> = {
   "net.optApply": "apply",
 
   "details.aria": "Details",
+  "details.copyLink": "Copy link",
+  "details.copyLinkHint": "Copies a link that opens the network with this entity selected",
   "details.ariaOf": "Details of {name}",
   "details.gone": "The selection is no longer in the filtered network.",
   "details.mentions": "{m} mentions · {d} docs",

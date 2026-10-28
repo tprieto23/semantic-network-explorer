@@ -20,6 +20,7 @@ import type { Theme } from "../state/theme";
 import { useTheme } from "../state/theme";
 import { CategoryDot } from "./Legend";
 import { Loader } from "./Loader";
+import { useCopyLink } from "./useCopyLink";
 import { useSwipeToClose } from "./useSwipeToClose";
 
 interface DetailsPanelProps {
@@ -82,6 +83,7 @@ function GoneDetails({ onClose }: { onClose: () => void }) {
 
 function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: NetworkResponse; filters: Filters }) {
   const { t, lang } = useT();
+  const copyLink = useCopyLink();
   const select = useSelectionStore((state) => state.select);
   const tab = useSelectionStore((state) => state.tab);
   const setTab = useSelectionStore((state) => state.setTab);
@@ -159,6 +161,9 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
             }}
           >
             {t("details.exclude")}
+          </button>
+          <button type="button" className="outline-btn" data-tip={t("details.copyLinkHint")} onClick={() => void copyLink()}>
+            {t("details.copyLink")}
           </button>
         </div>
       </div>

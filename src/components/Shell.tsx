@@ -6,7 +6,9 @@ import { useLangStore, useT } from "../i18n";
 import { useFilterStore } from "../state/filters";
 import type { Tab } from "../state/selection";
 import { useSelectionStore } from "../state/selection";
+import { useUiStore } from "../state/ui";
 import { Methodology } from "./Methodology";
+import { useCopyLink } from "./useCopyLink";
 import { useThemeStore } from "../state/theme";
 import { BookIcon, EvolutionIcon, GlobeIcon, LinkIcon, LogoIcon, MoreIcon, NetworkIcon, SearchIcon, SummaryIcon, TableIcon, ThemeIcon } from "./icons";
 import { CategoryDot } from "./Legend";
@@ -87,18 +89,8 @@ export function TopBar({ meta, network }: TopBarProps) {
   const toggleTheme = useThemeStore((state) => state.toggle);
   const [helpOpen, setHelpOpen] = useState(false);
   const [methodOpen, setMethodOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  // Los filtros, la vista y la selección viajan en la URL: copiarla comparte lo que se ve.
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2200);
-    } catch {
-      window.prompt(t("top.copyFallback"), window.location.href);
-    }
-  }
+  const copyLink = useCopyLink();
+  const toast = useUiStore((state) => state.toast);
   // En celular y tablet: el buscador se despliega desde un ícono e idioma, tema y ayuda van en «⋯».
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -191,16 +183,6 @@ export function TopBar({ meta, network }: TopBarProps) {
       </div>
 
       <div className="wide-only">{langSwitch}</div>
-
-      <button
-        type="button"
-        className="icon-btn wide-only"
-        aria-label={t("top.copyLink")}
-        data-tip={t("top.copyLink")}
-        onClick={() => void copyLink()}
-      >
-        <LinkIcon />
-      </button>
 
       <button
         type="button"
@@ -320,8 +302,8 @@ export function TopBar({ meta, network }: TopBarProps) {
 
       {methodOpen && <Methodology meta={meta} onClose={() => setMethodOpen(false)} />}
 
-      <div className={`toast glass${copied ? " show" : ""}`} role="status" aria-live="polite">
-        {copied ? t("top.copied") : ""}
+      <div className={`toast glass${toast ? " show" : ""}`} role="status" aria-live="polite">
+        {toast ?? ""}
       </div>
     </header>
   );

@@ -23,7 +23,12 @@ function initialCollapsed(): boolean {
 interface UiStore {
   filtersCollapsed: boolean;
   setFiltersCollapsed: (value: boolean) => void;
+  /** Aviso breve en la parte inferior (p. ej. «Enlace copiado»); null si no hay. */
+  toast: string | null;
+  showToast: (message: string) => void;
 }
+
+let toastTimer: number | undefined;
 
 export const useUiStore = create<UiStore>()((set) => ({
   filtersCollapsed: initialCollapsed(),
@@ -37,5 +42,11 @@ export const useUiStore = create<UiStore>()((set) => ({
       }
     }
     set({ filtersCollapsed });
+  },
+  toast: null,
+  showToast: (message) => {
+    window.clearTimeout(toastTimer);
+    set({ toast: message });
+    toastTimer = window.setTimeout(() => set({ toast: null }), 2200);
   },
 }));
