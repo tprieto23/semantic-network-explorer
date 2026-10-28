@@ -286,12 +286,22 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
   const { t, lang } = useT();
   const update = useFilterStore((state) => state.update);
   const stages = network.stages;
-  const noDocuments = network.scope.document_count === 0;
+  const documentCount = network.scope.document_count;
+  const noDocuments = documentCount === 0;
+  // Con menos documentos que la recurrencia mínima ninguna entidad puede entrar en la red.
+  const tooFewDocuments = documentCount > 0 && documentCount < filters.minDocuments;
   const options: { label: string; from: string; to: string; apply: () => void }[] = [];
   if (filters.minWeight > 0) {
     options.push({ label: t("net.optMinWeight"), from: String(filters.minWeight), to: "0", apply: () => update({ minWeight: 0 }) });
   }
-  if (filters.minDocuments > 2) {
+  if (tooFewDocuments) {
+    options.push({
+      label: t("net.optRecurrence"),
+      from: t("common.docs", { n: filters.minDocuments }),
+      to: documentCount === 1 ? t("common.docOne") : t("common.docs", { n: documentCount }),
+      apply: () => update({ minDocuments: documentCount }),
+    });
+  } else if (filters.minDocuments > 2) {
     options.push({
       label: t("net.optRecurrence"),
       from: `${filters.minDocuments}`,
@@ -352,10 +362,17 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
     <div className="state">
       <div className="state-card">
         <span className="state-ring" />
-        <strong>{noDocuments ? t("net.noDocsTitle") : t("net.emptyTitle")}</strong>
+        <strong>
+          {noDocuments ? t("net.noDocsTitle") : tooFewDocuments ? t("net.fewDocsTitle") : t("net.emptyTitle")}
+        </strong>
         <p>
           {noDocuments ? (
             t("net.noDocsBody")
+          ) : tooFewDocuments ? (
+            t(documentCount === 1 ? "net.fewDocsBodyOne" : "net.fewDocsBody", {
+              n: documentCount,
+              d: filters.minDocuments,
+            })
           ) : stages.document_recurrence.nodes > 0 ? (
             <>
               {t("net.emptyThere")}{" "}
@@ -363,7 +380,7 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
               {t("net.emptyRest", { d: filters.minDocuments })}
             </>
           ) : (
-            (network.warnings[0] ?? t("net.emptyNoEntities"))
+            t("net.emptyNoEntities")
           )}{" "}
           {options.length > 0 && t("net.emptyTry")}
         </p>
