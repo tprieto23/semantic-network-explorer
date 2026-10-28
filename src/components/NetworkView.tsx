@@ -94,7 +94,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
           />
         )}
 
-        {/* Arriba a la izquierda: «Explora» (si el panel está cerrado) y las vistas guiadas. */}
+        {/* Arriba a la izquierda: «Explora» y restablecer, si el panel está cerrado. */}
         <div className="stage-filters">
           {filtersCollapsed && (
             <button
@@ -119,8 +119,9 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
                 <ResetIcon />
               </button>
           )}
-          {graph && <GuidedViews />}
         </div>
+
+        {graph && <GuidedViews />}
 
         <div className="notices">
           {issues.map((issue) => (

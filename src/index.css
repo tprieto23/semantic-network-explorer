@@ -3272,53 +3272,148 @@ button.chip-static:hover {
   stroke-width: 1.2;
 }
 
-/* Vistas guiadas: islitas de vidrio sobre el grafo. */
-.islands {
+/* Vistas guiadas: bloque de vidrio abajo a la izquierda del grafo. */
+.guided {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 4;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  width: 236px;
+  padding: 6px;
+  border-radius: 16px;
 }
 
-.glass-btn.island {
-  height: 32px;
-  padding: 0 13px;
+.guided-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tx);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.guided-head svg {
+  color: var(--tx3);
+  transform: rotate(90deg);
+}
+
+.guided.collapsed {
+  width: auto;
+}
+
+.guided.collapsed .guided-head svg {
+  transform: rotate(-90deg);
+}
+
+.guided-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.guided-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--tx);
+  text-align: left;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.guided-item strong {
   font-size: 12.5px;
+  font-weight: 600;
 }
 
-.glass-btn.island[aria-pressed="true"] {
+.guided-item span {
+  color: var(--tx3);
+  font-size: 11.5px;
+}
+
+.guided-item:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border);
+}
+
+.guided-item[aria-pressed="true"] {
   background: var(--sel-bg);
-  color: var(--sel-fg);
   border-color: var(--acc);
+  color: var(--sel-fg);
   box-shadow:
     var(--sel-shadow),
-    inset 0 0 0 1px var(--acc),
     inset 0 1px 0 var(--sel-shine);
 }
 
-/* La vista activa lleva un check: el vidrio solo no basta para distinguirla. */
-.glass-btn.island[aria-pressed="true"]::before {
-  content: "✓";
-  color: var(--acc);
-  font-weight: 700;
+.guided-item[aria-pressed="true"] span {
+  color: inherit;
+  opacity: 0.75;
 }
 
-/* En celular las islitas van en una fila que se desliza de lado. */
+.guided-item[aria-pressed="true"] strong::before {
+  content: "✓ ";
+  color: var(--acc);
+}
+
+/* En celular el bloque sería demasiado grande: fila deslizable bajo la barra superior. */
 @media (max-width: 640px) {
-  .islands {
-    flex: 1 1 0;
-    min-width: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 2px 2px 6px;
+  .guided {
+    left: 10px;
+    right: 52px;
+    top: 58px;
+    bottom: auto;
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
-  .islands::-webkit-scrollbar {
+  .guided-head {
     display: none;
   }
 
-  .glass-btn.island {
+  .guided-list {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0;
+    padding: 2px 2px 6px;
+  }
+
+  .guided-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .guided-item {
     flex: none;
+    padding: 6px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(18px) saturate(1.8);
+    backdrop-filter: blur(18px) saturate(1.8);
+  }
+
+  .guided-item span {
+    display: none;
   }
 }
 

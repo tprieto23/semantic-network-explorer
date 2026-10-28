@@ -5,6 +5,8 @@ import { DEFAULT_FILTERS } from "../state/filters";
 export interface Preset {
   id: string;
   label: MessageKey;
+  /** Línea corta bajo el nombre, en el bloque de vistas. */
+  hint: MessageKey;
   description: MessageKey;
   /** Cambios sobre los valores por defecto; el resto de los filtros vuelve a su valor inicial. */
   patch: Partial<Filters>;
@@ -15,30 +17,35 @@ export const PRESETS: Preset[] = [
   {
     id: "actors",
     label: "preset.actors",
+    hint: "preset.actorsHint",
     description: "preset.actorsHelp",
     patch: { categories: ["CHAR"], metric: "pagerank" },
   },
   {
     id: "practices",
     label: "preset.practices",
+    hint: "preset.practicesHint",
     description: "preset.practicesHelp",
     patch: { categories: ["PRAC", "KNOW", "SKILL"], metric: "pagerank" },
   },
   {
     id: "bridges",
     label: "preset.bridges",
+    hint: "preset.bridgesHint",
     description: "preset.bridgesHelp",
     patch: { linkMode: "between", metric: "betweenness" },
   },
   {
     id: "territory",
     label: "preset.territory",
+    hint: "preset.territoryHint",
     description: "preset.territoryHelp",
     patch: { categories: ["LOC", "eco_INFRA", "physical_INFRA"], metric: "pagerank" },
   },
   {
     id: "recent",
     label: "preset.recent",
+    hint: "preset.recentHint",
     description: "preset.recentHelp",
     patch: { period: "2024-2026", colorBy: "community" },
   },
