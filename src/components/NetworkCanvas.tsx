@@ -238,13 +238,13 @@ async function exportPng(sigma: ReturnType<typeof useSigma>, filename: string, w
     context.save();
     context.scale(ratio, ratio);
     context.globalAlpha = 0.55;
-    const size = 26;
-    const margin = 16;
-    context.font = `600 12px "DM Sans", system-ui, sans-serif`;
+    const size = 34;
+    const margin = 18;
+    context.font = `600 16px "DM Sans", system-ui, sans-serif`;
     const textWidth = context.measureText(watermark).width;
     const x = width - margin - textWidth;
     const y = height - margin;
-    if (logo) context.drawImage(logo, x - size - 8, y - size + 7, size, size);
+    if (logo) context.drawImage(logo, x - size - 8, y - size + 9, size, size);
     context.fillStyle = styles.getPropertyValue("--tx2").trim() || "#5b615d";
     context.textBaseline = "alphabetic";
     context.fillText(watermark, x, y);
@@ -282,7 +282,7 @@ function ZoomControls() {
         type="button"
         aria-label={t("net.download")}
         data-tip={t("net.download")}
-        onClick={() => void exportPng(sigma, `${t("net.filename")}.png`, t("app.title"))}
+        onClick={() => void exportPng(sigma, `${t("net.filename")}.png`, t("net.watermark"))}
       >
         <DownloadIcon />
       </button>
