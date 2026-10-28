@@ -14,6 +14,9 @@ export type CategoryPair = [CategoryCode, CategoryCode];
 
 export type SectorFilter = "Agroforestry" | "all";
 
+/** "only": solo documentos de ese tipo; "exclude": todos menos ese tipo. */
+export type DocumentTypeMode = "only" | "exclude";
+
 /** Qué links se dibujan; no cambia lo que se calcula en la API. */
 export type EdgeDisplay = "strongest" | "all";
 
@@ -23,6 +26,9 @@ export interface Filters {
   period: PeriodId;
   incubator: number | "all";
   language: string;
+  /** "all" = todos los tipos de documento. */
+  documentType: string;
+  documentTypeMode: DocumentTypeMode;
   /** Vacío = todos los documentos listos. */
   documentIds: string[];
   /** Vacío = las diez categorías y el legado presente (decide el backend). */
@@ -44,6 +50,8 @@ export const DEFAULT_FILTERS: Filters = {
   period: "all",
   incubator: "all",
   language: "all",
+  documentType: "all",
+  documentTypeMode: "only",
   documentIds: [],
   categories: [],
   linkMode: "any",
@@ -97,6 +105,10 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.period !== DEFAULT_FILTERS.period) params.set("period", filters.period);
   if (filters.incubator !== "all") params.set("inc", String(filters.incubator));
   if (filters.language !== "all") params.set("lang", filters.language);
+  if (filters.documentType !== "all") {
+    params.set("dtype", filters.documentType);
+    if (filters.documentTypeMode === "exclude") params.set("dmode", "exclude");
+  }
   if (filters.documentIds.length) params.set("docs", filters.documentIds.join(","));
   if (filters.categories.length) params.set("cats", filters.categories.join(","));
   if (filters.linkMode !== DEFAULT_FILTERS.linkMode) params.set("links", filters.linkMode);
@@ -129,12 +141,16 @@ export function filtersFromSearch(search: string): Filters {
     );
   const incubator = Number.parseInt(params.get("inc") ?? "", 10);
   const minWeight = Number.parseFloat(params.get("minw") ?? "");
+  const documentType = params.get("dtype")?.trim() || "all";
 
   return {
     sector: oneOf(params.get("sector"), SECTORS, DEFAULT_FILTERS.sector),
     period: oneOf(params.get("period"), PERIODS, DEFAULT_FILTERS.period),
     incubator: incubator >= 1 && incubator <= 8 ? incubator : "all",
     language: params.get("lang")?.trim().toLowerCase() || "all",
+    documentType,
+    documentTypeMode:
+      documentType === "all" ? "only" : oneOf(params.get("dmode"), ["only", "exclude"] as const, "only"),
     documentIds: (params.get("docs") ?? "").split(",").filter(Boolean),
     categories,
     linkMode: oneOf(params.get("links"), LINK_MODES, DEFAULT_FILTERS.linkMode),
@@ -154,6 +170,8 @@ function sharedRequest(filters: Filters) {
     productive_sector: filters.sector,
     incubator_number: filters.incubator,
     language: filters.language,
+    document_type: filters.documentType === "all" ? null : filters.documentType,
+    document_type_mode: filters.documentTypeMode,
     document_ids: filters.documentIds.length ? filters.documentIds : null,
     categories: filters.categories.length ? filters.categories : null,
     link_mode: filters.linkMode,
@@ -176,7 +194,9 @@ export function toCompareRequest(filters: Filters, topK = 15): CompareRequest {
 
 /** Cuántos filtros difieren de sus valores por defecto (cada lista cuenta como uno). */
 export function activeFilterCount(filters: Filters): number {
-  return (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => {
+  // El modo del tipo de documento es parte del mismo filtro que el tipo.
+  const keys = (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => key !== "documentTypeMode");
+  return keys.filter((key) => {
     const value = filters[key];
     const fallback = DEFAULT_FILTERS[key];
     return Array.isArray(value) ? value.length > 0 : value !== fallback;

@@ -9,9 +9,10 @@ import { errorText, useT } from "../i18n";
 import type { Filters } from "../state/filters";
 import { COMPARED_PERIODS } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
-import { useTheme } from "../state/theme";
 import { CategoryDot } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
+import { Loader } from "./Loader";
+import { periodDocumentCount } from "../domain/scope";
 
 const TOP_K = 15;
 
@@ -21,9 +22,7 @@ function periodLabel(period: string) {
 
 export default function EvolutionView({ filters, meta }: { filters: Filters; meta: ExplorerMeta | undefined }) {
   const { t, lang } = useT();
-  const counts = COMPARED_PERIODS.map(
-    (period) => meta?.periods.find((item) => item.id === period)?.document_count ?? 0,
-  );
+  const counts = COMPARED_PERIODS.map((period) => periodDocumentCount(meta, filters, period) ?? 0);
   // Comparar tiene sentido con al menos dos períodos con documentos.
   const ready = counts.filter((count) => count > 0).length >= 2;
   const compare = useCompare(filters, TOP_K, ready);
@@ -103,7 +102,13 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
             <h3>{t("evo.topK", { k: TOP_K, metric: metricLabel(filters.metric, lang) })}</h3>
             <span>{t("evo.thick")}</span>
           </div>
-          {data ? <SlopeChart data={data} /> : <div className="ghost" style={{ height: 360 }} />}
+          {data ? (
+            <SlopeChart data={data} />
+          ) : (
+            <div style={{ display: "grid", placeItems: "center", height: 360 }}>
+              <Loader size={64} label={t("sum.comparing")} />
+            </div>
+          )}
         </section>
         {data && <Changes data={data} />}
       </div>
@@ -178,7 +183,7 @@ function PeriodCanvas({
       {!graph && (
         <div className="state">
           {loading ? (
-            <span className="spinner" />
+            <Loader size={56} />
           ) : (
             <p className="muted" style={{ margin: 0 }}>
               {t("evo.noNetwork")}
@@ -199,7 +204,6 @@ function shorten(name: string) {
 /** Ranking del top K en cada período; cada línea une las posiciones de una entidad. */
 function SlopeChart({ data }: { data: CompareResponse }) {
   const { t } = useT();
-  const theme = useTheme();
   const select = useSelectionStore((state) => state.select);
   const width = 480;
   const left = 160;
@@ -237,7 +241,7 @@ function SlopeChart({ data }: { data: CompareResponse }) {
         const previousRank = points[last - 1]?.rank ?? null;
         const delta = previousRank !== null && lastRank !== null ? previousRank - lastRank : null;
         const strong = delta === null || Math.abs(delta) >= 5;
-        const color = categoryColor(trajectory.category, theme);
+        const color = categoryColor(trajectory.category);
         const path = points.map((point, index) => `${x(index)},${y(point.rank)}`).join(" ");
         const summary = points.map((point) => `#${point.rank ?? "—"}`).join(" → ");
         return (

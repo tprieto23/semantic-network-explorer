@@ -9,6 +9,7 @@ import { useSelectionStore } from "../state/selection";
 import { useThemeStore } from "../state/theme";
 import { EvolutionIcon, LogoIcon, MoreIcon, NetworkIcon, SearchIcon, SummaryIcon, TableIcon, ThemeIcon } from "./icons";
 import { CategoryDot } from "./Legend";
+import { periodDocumentCount } from "../domain/scope";
 
 const VIEWS: { id: Tab; label: MessageKey; title: MessageKey; icon: ReactNode }[] = [
   { id: "summary", label: "nav.summary", title: "nav.summary", icon: <SummaryIcon /> },
@@ -101,10 +102,7 @@ export function TopBar({ meta, network }: TopBarProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen, helpOpen]);
 
-  const documentCount =
-    filters.period === "all"
-      ? meta?.documents.length
-      : meta?.periods.find((period) => period.id === filters.period)?.document_count;
+  const documentCount = periodDocumentCount(meta, filters, filters.period);
 
   const langSwitch = (
     <div className="pill-group lang-group" role="group" aria-label={t("top.language")}>
@@ -153,14 +151,20 @@ export function TopBar({ meta, network }: TopBarProps) {
 
       <div className="pill-group periods" role="group" aria-label={t("top.period")}>
         {PERIOD_ORDER.map((period) => {
-          const count = period === "all" ? undefined : meta?.periods.find((item) => item.id === period)?.document_count;
+          const count = periodDocumentCount(meta, filters, period);
           return (
             <button
               key={period}
               type="button"
               aria-pressed={filters.period === period}
               disabled={count === 0}
-              title={count === 0 ? t("top.periodEmpty") : undefined}
+              title={
+                count === 0
+                  ? t("top.periodEmpty")
+                  : count !== undefined
+                    ? t("common.documents", { n: formatInt(count, lang) })
+                    : undefined
+              }
               onClick={() => update({ period })}
             >
               {periodShort(period, lang)}

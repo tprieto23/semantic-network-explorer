@@ -6,6 +6,7 @@ export type ExplorerMeta = Schemas["ExplorerMetaResponse"];
 export type ExplorerCategory = Schemas["ExplorerCategory"];
 export type ExplorerPeriod = Schemas["ExplorerPeriod"];
 export type ExplorerDocument = Schemas["ExplorerDocument"];
+export type ExplorerDocumentType = Schemas["ExplorerDocumentType"];
 export type NetworkRequest = Schemas["ExplorerNetworkRequest"];
 export type NetworkResponse = Schemas["ExplorerNetworkResponse"];
 export type ExplorerNode = Schemas["ExplorerNode"];
@@ -30,6 +31,8 @@ export interface EvidenceParams {
   period: PeriodId;
   incubatorNumber: number | "all";
   language: string;
+  documentType: string;
+  documentTypeMode: "only" | "exclude";
   documentIds: string[];
   limit?: number;
 }
@@ -92,6 +95,10 @@ export const explorerApi = {
       productive_sector: params.sector,
       limit: String(params.limit ?? 50),
     });
+    if (params.documentType !== "all") {
+      search.set("document_type", params.documentType);
+      search.set("document_type_mode", params.documentTypeMode);
+    }
     params.documentIds.forEach((id) => search.append("document_ids", id));
     return request<EvidenceResponse>(`/evidence?${search.toString()}`, { signal });
   },

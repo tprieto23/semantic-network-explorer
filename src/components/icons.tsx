@@ -1,14 +1,35 @@
+import { useId } from "react";
+
 /** Íconos del diseño, en SVG en línea para heredar el color del texto. */
 
-export function LogoIcon() {
+/** Logo del proyecto (public/favicon.svg): tres nodos girados 45°, con fondo transparente. */
+export function LogoIcon({ size = 38 }: { size?: number }) {
+  // Ids únicos: el logo puede aparecer dos veces en la página (riel y barra de celular).
+  // useId trae caracteres como «» o «:» que algunos navegadores no aceptan en url(#…).
+  const id = `logo${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const main = `${id}-principal`;
+  const second = `${id}-secundaria`;
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <line x1="6" y1="7" x2="15" y2="5" stroke="currentColor" strokeWidth="1.6" />
-      <line x1="6" y1="7" x2="11" y2="16" stroke="currentColor" strokeWidth="1.6" />
-      <line x1="15" y1="5" x2="11" y2="16" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="6" cy="7" r="3" fill="currentColor" />
-      <circle cx="15" cy="5" r="2.2" fill="currentColor" />
-      <circle cx="11" cy="16" r="3.4" fill="currentColor" />
+    <svg width={size} height={size} viewBox="0 0 320 320" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id={main} x1="106" y1="222" x2="184" y2="80" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#6BC8CC" />
+          <stop offset="1" stopColor="#8BCB2E" />
+        </linearGradient>
+        <linearGradient id={second} x1="184" y1="80" x2="220" y2="180" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8BCB2E" />
+          <stop offset="1" stopColor="#858DCC" />
+        </linearGradient>
+      </defs>
+      <g transform="rotate(45 160 160)">
+        <g strokeWidth="9" strokeLinecap="round">
+          <path d="M106 222 184 80" stroke={`url(#${main})`} />
+          <path d="M184 80 220 180" stroke={`url(#${second})`} />
+        </g>
+        <circle cx="106" cy="222" r="48" fill="#6BC8CC" />
+        <circle cx="184" cy="80" r="36" fill="#8BCB2E" />
+        <circle cx="220" cy="180" r="22" fill="#858DCC" />
+      </g>
     </svg>
   );
 }

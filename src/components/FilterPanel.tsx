@@ -10,11 +10,11 @@ import {
   formatInt,
   linkModes,
   metricInfo,
-  periodShort,
 } from "../domain/vocabulary";
 import { useT } from "../i18n";
 import type { CategoryPair, Filters } from "../state/filters";
 import { activeFilterCount, useFilterStore } from "../state/filters";
+import { documentsInScope } from "../domain/scope";
 import { useTheme } from "../state/theme";
 import { useUiStore } from "../state/ui";
 import { ChevronIcon, ResetIcon } from "./icons";
@@ -81,10 +81,10 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
     <>
       {/* Solo visible en celular, donde el panel es una hoja sobre la red. */}
       <div className="sheet-backdrop" aria-hidden onClick={() => setCollapsed(true)} />
-      <aside className="card filters" aria-label={t("filters.title")}>
+      <aside className="card filters" aria-label={t("filters.heading")}>
         <div className="panel-head">
           <h2>
-            {t("filters.title")}
+            {t("filters.heading")}
             {active > 0 && <span className="badge num">{active}</span>}
           </h2>
           <div className="panel-actions">
@@ -103,33 +103,6 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
         )}
 
         <div className="filters-body">
-          <section className="group">
-            <h3 className="group-title">{t("filters.scope")}</h3>
-            <div className="field">
-              <span className="field-label">{t("filters.period")}</span>
-              <div className="segmented" role="group" aria-label={t("filters.period")}>
-                <button type="button" aria-pressed={filters.period === "all"} onClick={() => update({ period: "all" })}>
-                  {t("filters.allPeriods")}
-                  <span className="count">{meta ? t("common.docs", { n: meta.documents.length }) : "–"}</span>
-                </button>
-                {(meta?.periods ?? []).map((period) => (
-                  <button
-                    key={period.id}
-                    type="button"
-                    aria-pressed={filters.period === period.id}
-                    onClick={() => update({ period: period.id as Filters["period"] })}
-                  >
-                    {periodShort(period.id as Filters["period"], lang)}
-                    <span className="count">{t("common.docs", { n: period.document_count })}</span>
-                  </button>
-                ))}
-              </div>
-              {meta && meta.documents_without_year > 0 && (
-                <p className="help">{t("filters.withoutYear", { n: meta.documents_without_year })}</p>
-              )}
-            </div>
-          </section>
-
           <section className="group">
             <div className="group-head">
               <h3 className="group-title">{t("filters.categories")}</h3>
@@ -154,7 +127,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                     onClick={() => toggleCategory(code)}
                     style={
                       active
-                        ? { borderColor: categoryColor(code, theme), background: categoryTint(code, theme) }
+                        ? { borderColor: categoryColor(code), background: categoryTint(code, theme) }
                         : undefined
                     }
                   >
@@ -224,7 +197,12 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
             </div>
           </section>
 
-          <details className="disclosure" open={filters.linkMode !== "any" || undefined}>
+          <details
+            className="disclosure"
+            open={
+              filters.linkMode !== "any" || filters.language !== "all" || filters.documentType !== "all" || undefined
+            }
+          >
             <summary>{t("filters.advanced")}</summary>
             <div className="disclosure-body">
               <AdvancedFilters meta={meta} filters={filters} update={update} selectedCodes={selectedCodes} />
@@ -283,6 +261,57 @@ function ExcludedEntities({
   );
 }
 
+/** Nombre del idioma en el idioma de la interfaz («inglés», «English»); si no, el código. */
+function languageName(code: string, lang: string): string {
+  try {
+    return new Intl.DisplayNames([lang], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** El valor del select codifica modo y tipo: "all", "only:<tipo>" o "exclude:<tipo>". */
+function DocumentTypeSelect({ meta, filters, update }: Pick<AdvancedFiltersProps, "meta" | "filters" | "update">) {
+  const { t, lang } = useT();
+  const types = meta?.document_types ?? [];
+  // Un tipo que llega por la URL y ya no está en los datos sigue visible para poder quitarlo.
+  const missing = filters.documentType !== "all" && !types.some((type) => type.name === filters.documentType);
+  const options = missing ? [...types, { name: filters.documentType, document_count: 0 }] : types;
+  const value = filters.documentType === "all" ? "all" : `${filters.documentTypeMode}:${filters.documentType}`;
+
+  function change(next: string) {
+    if (next === "all") return update({ documentType: "all", documentTypeMode: "only" });
+    const separator = next.indexOf(":");
+    update({
+      documentTypeMode: next.slice(0, separator) === "exclude" ? "exclude" : "only",
+      documentType: next.slice(separator + 1),
+    });
+  }
+
+  return (
+    <div className="field">
+      <label htmlFor="document-type">{t("filters.documentType")}</label>
+      <select id="document-type" className="select" value={value} onChange={(event) => change(event.target.value)}>
+        <option value="all">{t("filters.allTypes")}</option>
+        <optgroup label={t("filters.typeOnlyGroup")}>
+          {options.map((type) => (
+            <option key={type.name} value={`only:${type.name}`}>
+              {t("filters.only", { name: type.name })} · {t("common.docs", { n: formatInt(type.document_count, lang) })}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label={t("filters.typeExcludeGroup")}>
+          {options.map((type) => (
+            <option key={type.name} value={`exclude:${type.name}`}>
+              {t("filters.typeExclude", { name: type.name })}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </div>
+  );
+}
+
 interface AdvancedFiltersProps {
   meta: ExplorerMeta | undefined;
   filters: Filters;
@@ -294,7 +323,8 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
   const { t, lang } = useT();
   const [docQuery, setDocQuery] = useState("");
   const [showDocs, setShowDocs] = useState(filters.documentIds.length > 0);
-  const documents = (meta?.documents ?? []).filter((document) =>
+  // La lista solo ofrece documentos que caben en el idioma, el tipo y la incubadora elegidos.
+  const documents = documentsInScope(meta?.documents ?? [], { ...filters, documentIds: [] }).filter((document) =>
     document.name.toLowerCase().includes(docQuery.trim().toLowerCase()),
   );
   const weightings = edgeWeightings(lang);
@@ -335,7 +365,7 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
           <option value="all">{t("filters.sectorAll")}</option>
         </select>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 8 }}>
         <div className="field">
           <label htmlFor="incubator">{t("filters.incubator")}</label>
           <select
@@ -365,12 +395,13 @@ function AdvancedFilters({ meta, filters, update, selectedCodes }: AdvancedFilte
             <option value="all">{t("filters.allLanguages")}</option>
             {(meta?.languages ?? []).map((language) => (
               <option key={language} value={language}>
-                {language}
+                {t("filters.only", { name: languageName(language, lang) })}
               </option>
             ))}
           </select>
         </div>
       </div>
+      <DocumentTypeSelect meta={meta} filters={filters} update={update} />
 
       <div className="field">
         <button type="button" className="text-btn" style={{ textAlign: "left" }} onClick={() => setShowDocs(!showDocs)}>

@@ -125,7 +125,7 @@ export function buildGraph(network: NetworkResponse, options: BuildOptions): Exp
       y: point.y,
       size: scaleNodeSize(node.metrics[metric], minValue, maxValue),
       // El canvas recolorea según el tema; este es el color de respaldo.
-      color: categoryColor(node.category, "oscuro"),
+      color: categoryColor(node.category),
       label: node.name,
       category: node.category,
       metricValue: node.metrics[metric],

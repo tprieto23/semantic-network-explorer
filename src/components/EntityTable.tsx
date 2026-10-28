@@ -5,6 +5,7 @@ import { METRIC_ORDER, categoryLabel, formatInt, formatMetric, metricInfo, metri
 import { useT } from "../i18n";
 import { useSelectionStore } from "../state/selection";
 import { CategoryDot } from "./Legend";
+import { Loader } from "./Loader";
 
 function download(filename: string, content: string) {
   // El BOM permite que Excel reconozca la codificación UTF-8 (tildes y eñes).
@@ -55,6 +56,11 @@ export function EntityTable({ network, metric }: { network: NetworkResponse | un
           {t("table.export")}
         </button>
       </div>
+      {!network && (
+        <div style={{ display: "grid", placeItems: "center", padding: 60 }}>
+          <Loader size={72} label={t("common.loading")} />
+        </div>
+      )}
       <div className="table-scroll">
         <table className="entity-table">
           <thead>

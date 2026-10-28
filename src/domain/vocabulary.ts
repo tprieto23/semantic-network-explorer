@@ -2,26 +2,22 @@ import type { CategoryCode, EdgeWeighting, LinkMode, PeriodId, RankingMetric } f
 import type { Lang } from "../i18n";
 import type { Theme } from "../state/theme";
 
-interface CategoryPalette {
-  /** Tono saturado: resaltados y acentos. */
-  vivid: Record<Theme, string>;
-  /** Tono suave: nodos, puntos y chips (estilo «plano» del diseño). */
-  soft: Record<Theme, string>;
-}
-
-/** Paleta validada en claro y oscuro (diseño «Redes semánticas · Madre de Dios»). */
-const PALETTE: Record<CategoryCode, CategoryPalette> = {
-  CHAR: { vivid: { oscuro: "#F3A742", claro: "#B46A00" }, soft: { oscuro: "#D3A262", claro: "#C8873A" } },
-  LOC: { vivid: { oscuro: "#6CC1F0", claro: "#0A79B5" }, soft: { oscuro: "#82B2CF", claro: "#4E8DB8" } },
-  PRAC: { vivid: { oscuro: "#2FBF8A", claro: "#0A7F57" }, soft: { oscuro: "#68AD90", claro: "#4E9A73" } },
-  RUL: { vivid: { oscuro: "#F07555", claro: "#BE3E1E" }, soft: { oscuro: "#D08A78", claro: "#C46A55" } },
-  KNOW: { vivid: { oscuro: "#E08BC4", claro: "#A6388A" }, soft: { oscuro: "#C29DBA", claro: "#A56A9A" } },
-  ATT: { vivid: { oscuro: "#EBD64E", claro: "#8A7500" }, soft: { oscuro: "#C8BA74", claro: "#B39B3A" } },
-  SKILL: { vivid: { oscuro: "#5F8DF5", claro: "#2B55C9" }, soft: { oscuro: "#8699CC", claro: "#6077B8" } },
-  physical_INFRA: { vivid: { oscuro: "#C09A78", claro: "#7A5536" }, soft: { oscuro: "#AE9A88", claro: "#9A7F68" } },
-  soft_INFRA: { vivid: { oscuro: "#A98BFF", claro: "#6A43D6" }, soft: { oscuro: "#A397CE", claro: "#8573BE" } },
-  eco_INFRA: { vivid: { oscuro: "#A7D45A", claro: "#4F7F0C" }, soft: { oscuro: "#A0B878", claro: "#7FA04A" } },
-  INFRA: { vivid: { oscuro: "#9AA19C", claro: "#6B716D" }, soft: { oscuro: "#8E948F", claro: "#80857F" } },
+/**
+ * Paleta de categorías (incluye los tres tonos del logo). Es la misma en claro y oscuro;
+ * INFRA (categoría antigua, ya no aparece en los datos) queda en gris neutro.
+ */
+const PALETTE: Record<CategoryCode, string> = {
+  CHAR: "#858DCC", // violeta del logo
+  LOC: "#8BCB2E", // verde lima del logo
+  PRAC: "#DE6B9C", // rosa frambuesa
+  RUL: "#6BC8CC", // turquesa del logo
+  KNOW: "#397DB8", // azul
+  ATT: "#E69745", // naranja
+  SKILL: "#287A62", // verde bosque
+  physical_INFRA: "#BC5653", // rojo terracota
+  soft_INFRA: "#B99B30", // amarillo mostaza
+  eco_INFRA: "#794A83", // morado ciruela
+  INFRA: "#8E948F",
 };
 
 /** Orden de presentación de las categorías en filtros y leyendas. */
@@ -39,14 +35,13 @@ export const CATEGORY_ORDER: CategoryCode[] = [
   "INFRA",
 ];
 
-export function categoryColor(code: string, theme: Theme, tone: "soft" | "vivid" = "soft"): string {
-  const palette = PALETTE[code as CategoryCode] ?? PALETTE.INFRA;
-  return palette[tone][theme];
+export function categoryColor(code: string): string {
+  return PALETTE[code as CategoryCode] ?? PALETTE.INFRA;
 }
 
 /** Fondo translúcido de chips y marcas de evidencia. */
 export function categoryTint(code: string, theme: Theme): string {
-  return `${categoryColor(code, theme)}${theme === "oscuro" ? "2e" : "26"}`;
+  return `${categoryColor(code)}${theme === "oscuro" ? "2e" : "26"}`;
 }
 
 const CATEGORY_LABELS: Record<Lang, Record<CategoryCode, string>> = {

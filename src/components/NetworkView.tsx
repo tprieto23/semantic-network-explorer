@@ -12,6 +12,7 @@ import { useUiStore } from "../state/ui";
 import { FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot, Legend } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
+import { Loader } from "./Loader";
 
 interface NetworkViewProps {
   network: NetworkResponse | undefined;
@@ -60,7 +61,11 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
 
   return (
     <section className="stage" aria-label={t("net.aria")}>
-      {isFetching && graph && <div className="loading-bar" role="progressbar" aria-label={t("net.updating")} />}
+      {isFetching && graph && (
+        <div className="updating">
+          <Loader size={22} inline label={t("net.updating")} />
+        </div>
+      )}
 
       {network && network.nodes.length > 0 && (
         <Insights network={network} compare={compare} metric={filters.metric} onPick={focusOn} />
@@ -80,7 +85,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
               onClick={() => setFiltersCollapsed(false)}
             >
               <FilterIcon />
-              {t("filters.title")}
+              {t("filters.heading")}
               {activeFilters > 0 && <span className="badge num">{activeFilters}</span>}
             </button>
             {activeFilters > 0 && (
@@ -221,7 +226,7 @@ function Insights({
         <div className="insight">
           <span className="insight-label">{t("net.riser")}</span>
           <span className="insight-value">
-            <span>{compare ? t("net.riserNone") : t("common.computing")}</span>
+            {compare ? <span>{t("net.riserNone")}</span> : <Loader size={18} inline label={t("common.computing")} />}
           </span>
         </div>
       )}
@@ -234,7 +239,7 @@ function LoadingState({ network }: { network: NetworkResponse | undefined }) {
   return (
     <div className="state">
       <div className="state-card center">
-        <span className="spinner" />
+        <Loader size={88} />
         <strong>{t("net.loadingTitle")}</strong>
         <p>
           {network
@@ -281,6 +286,7 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
   const { t, lang } = useT();
   const update = useFilterStore((state) => state.update);
   const stages = network.stages;
+  const noDocuments = network.scope.document_count === 0;
   const options: { label: string; from: string; to: string; apply: () => void }[] = [];
   if (filters.minWeight > 0) {
     options.push({ label: t("net.optMinWeight"), from: String(filters.minWeight), to: "0", apply: () => update({ minWeight: 0 }) });
@@ -317,6 +323,22 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
       apply: () => update({ excludedEntityIds: [] }),
     });
   }
+  if (filters.language !== "all") {
+    options.push({
+      label: t("net.optLanguage"),
+      from: filters.language,
+      to: t("net.optAll"),
+      apply: () => update({ language: "all" }),
+    });
+  }
+  if (filters.documentType !== "all") {
+    options.push({
+      label: t("net.optDocumentType"),
+      from: `${filters.documentTypeMode === "exclude" ? "≠ " : ""}${filters.documentType}`,
+      to: t("net.optAll"),
+      apply: () => update({ documentType: "all", documentTypeMode: "only" }),
+    });
+  }
   if (filters.period !== "all") {
     options.push({
       label: t("net.optPeriod"),
@@ -330,9 +352,11 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
     <div className="state">
       <div className="state-card">
         <span className="state-ring" />
-        <strong>{t("net.emptyTitle")}</strong>
+        <strong>{noDocuments ? t("net.noDocsTitle") : t("net.emptyTitle")}</strong>
         <p>
-          {stages.document_recurrence.nodes > 0 ? (
+          {noDocuments ? (
+            t("net.noDocsBody")
+          ) : stages.document_recurrence.nodes > 0 ? (
             <>
               {t("net.emptyThere")}{" "}
               <strong className="num">{t("net.emptyEntities", { n: formatInt(stages.document_recurrence.nodes, lang) })}</strong>{" "}

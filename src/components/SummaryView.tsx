@@ -6,10 +6,10 @@ import { LayoutMemory } from "../graph/buildGraph";
 import { useT } from "../i18n";
 import type { Filters } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
-import { useTheme } from "../state/theme";
 import { ArrowIcon } from "./icons";
 import { CategoryDot, Legend } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
+import { Loader } from "./Loader";
 
 interface SummaryViewProps {
   network: NetworkResponse | undefined;
@@ -28,7 +28,6 @@ function yearRange(meta: ExplorerMeta | undefined) {
 
 export function SummaryView({ network, compare, meta, filters, isFetching }: SummaryViewProps) {
   const { t, lang } = useT();
-  const theme = useTheme();
   const select = useSelectionStore((state) => state.select);
   const setTab = useSelectionStore((state) => state.setTab);
   const requestFocus = useSelectionStore((state) => state.requestFocus);
@@ -44,10 +43,12 @@ export function SummaryView({ network, compare, meta, filters, isFetching }: Sum
       <div className="scroll-view">
         <div className="summary-head">
           <span className="eyebrow">{t("sum.eyebrow")}</span>
-          <h2 className="ghost">{t("sum.computing")}</h2>
+          <h2>{t("sum.computing")}</h2>
         </div>
         <div className="summary-grid">
-          <div className="hero ghost" />
+          <div className="hero hero-loading">
+            <Loader size={96} label={t("net.loadingNote")} />
+          </div>
           <div className="essentials">
             {[0, 1, 2, 3].map((key) => (
               <div key={key} className="essential ghost" style={{ minHeight: 86 }} />
@@ -105,7 +106,11 @@ export function SummaryView({ network, compare, meta, filters, isFetching }: Sum
 
       <div className="summary-grid">
         <section className="hero" aria-label={t("sum.heroAria")}>
-          {isFetching && <div className="loading-bar" />}
+          {isFetching && (
+            <div className="updating">
+              <Loader size={22} inline label={t("net.updating")} />
+            </div>
+          )}
           <span className="hero-badge num">{t("sum.heroBadge", { n: network.stages.shown.nodes, metric: metricName })}</span>
           <button type="button" className="hero-cta" onClick={() => setTab("network")}>
             {t("sum.explore")}
@@ -245,7 +250,7 @@ export function SummaryView({ network, compare, meta, filters, isFetching }: Sum
                   <span className="name">{node.name}</span>
                   <span
                     className="mini-bar"
-                    style={{ width: Math.max(8, share * 28), background: categoryColor(category, theme) }}
+                    style={{ width: Math.max(8, share * 28), background: categoryColor(category) }}
                   />
                   <span className="value">#{node.ranks[metric]}</span>
                 </button>
@@ -261,7 +266,7 @@ export function SummaryView({ network, compare, meta, filters, isFetching }: Sum
               <ArrowIcon />
             </button>
           </div>
-          {!compare && <p className="help ghost">{t("sum.comparing")}</p>}
+          {!compare && <Loader size={22} inline label={t("sum.comparing")} />}
           {compare && ups.length === 0 && downs.length === 0 && <p className="help">{t("sum.noShifts")}</p>}
           {ups.length > 0 && (
             <>

@@ -19,6 +19,7 @@ import { useSelectionStore } from "../state/selection";
 import type { Theme } from "../state/theme";
 import { useTheme } from "../state/theme";
 import { CategoryDot } from "./Legend";
+import { Loader } from "./Loader";
 
 interface DetailsPanelProps {
   network: NetworkResponse | undefined;
@@ -188,7 +189,7 @@ function NodeDetails({ node, network, filters }: { node: ExplorerNode; network: 
           <div className="section-head">
             <h3>{t("details.evolution", { metric: metricLabel(filters.metric, lang) })}</h3>
           </div>
-          {compare.isLoading && <p className="help ghost">{t("details.computingPeriods")}</p>}
+          {compare.isLoading && <Loader size={22} inline label={t("details.computingPeriods")} />}
           {compare.data && !trajectory && <p className="help">{t("details.outOfTop")}</p>}
           {trajectory && last && (
             <div className="evo-card">
@@ -273,7 +274,7 @@ function highlight(text: string, terms: { text: string; category: string }[], th
         key={index}
         style={{
           background: categoryTint(term.category, theme),
-          borderBottom: `2px solid ${categoryColor(term.category, theme)}`,
+          borderBottom: `2px solid ${categoryColor(term.category)}`,
         }}
       >
         {part}
@@ -310,6 +311,8 @@ function EdgeDetails({
     period: filters.period,
     incubatorNumber: filters.incubator,
     language: filters.language,
+    documentType: filters.documentType,
+    documentTypeMode: filters.documentTypeMode,
     documentIds: filters.documentIds,
   };
   const evidence = useEvidence(params);
@@ -343,7 +346,7 @@ function EdgeDetails({
               <button
                 type="button"
                 className="tag"
-                style={{ background: categoryTint(node.category, theme), borderColor: categoryColor(node.category, theme) }}
+                style={{ background: categoryTint(node.category, theme), borderColor: categoryColor(node.category) }}
                 onClick={() => select({ kind: "node", id: node.id })}
               >
                 <CategoryDot category={node.category} />
@@ -364,8 +367,7 @@ function EdgeDetails({
         )}
       </div>
       <div className="details-body" style={{ gap: 8 }}>
-        {evidence.isLoading &&
-          [0, 1, 2].map((key) => <div key={key} className="sentence ghost" style={{ height: 86 }} />)}
+        {evidence.isLoading && <Loader size={56} label={t("details.loadingEvidence")} className="center" />}
         {evidence.error instanceof Error && <div className="notice error">{errorText(evidence.error, t)}</div>}
         {evidence.data && <Sentences data={evidence.data} source={source} target={target} theme={theme} />}
       </div>

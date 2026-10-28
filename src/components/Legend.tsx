@@ -1,10 +1,8 @@
 import { CATEGORY_ORDER, categoryColor, categoryLabel } from "../domain/vocabulary";
 import { useT } from "../i18n";
-import { useTheme } from "../state/theme";
 
 export function CategoryDot({ category, size = 8 }: { category: string; size?: number }) {
-  const theme = useTheme();
-  return <span className="dot" style={{ background: categoryColor(category, theme), width: size, height: size }} />;
+  return <span className="dot" style={{ background: categoryColor(category), width: size, height: size }} />;
 }
 
 export function Legend({ categories }: { categories: string[] }) {

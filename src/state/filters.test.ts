@@ -21,6 +21,8 @@ describe("URL serialization", () => {
       period: "2024-2026",
       incubator: 3,
       language: "es",
+      documentType: "WA SAM Hub",
+      documentTypeMode: "exclude",
       documentIds: ["d1", "d2"],
       categories: ["CHAR", "PRAC", "RUL"],
       linkMode: "pairs",
@@ -62,6 +64,14 @@ describe("API requests", () => {
     expect(request.category_pairs).toBeNull();
     expect(request.top_n).toBe(150);
     expect(request.productive_sector).toBe("Agroforestry");
+    expect(request.document_type).toBeNull();
+  });
+
+  it("sends the document type with its mode", () => {
+    const request = toNetworkRequest({ ...DEFAULT_FILTERS, documentType: "Other", documentTypeMode: "exclude" });
+
+    expect(request.document_type).toBe("Other");
+    expect(request.document_type_mode).toBe("exclude");
   });
 
   it("builds compare requests for both periods without top_n", () => {
@@ -70,6 +80,14 @@ describe("API requests", () => {
     expect(request.periods).toEqual(["2000-2020", "2021-2023", "2024-2026"]);
     expect(request.top_k).toBe(10);
     expect("top_n" in request).toBe(false);
+  });
+});
+
+describe("document type in the URL", () => {
+  it("ignores the mode without a type and counts type and mode as one filter", () => {
+    expect(filtersFromSearch("?dmode=exclude").documentTypeMode).toBe("only");
+    expect(filtersFromSearch("?dtype=Other&dmode=magic").documentTypeMode).toBe("only");
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, documentType: "Other", documentTypeMode: "exclude" })).toBe(1);
   });
 });
 

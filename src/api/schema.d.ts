@@ -943,6 +943,18 @@ export interface components {
              * @enum {string}
              */
             productive_sector: "all" | "Agroforestry";
+            /**
+             * Document Type
+             * @description Tipo de documento (document_type); null usa todos los tipos
+             */
+            document_type?: string | null;
+            /**
+             * Document Type Mode
+             * @description only: solo documentos de ese tipo; exclude: todos menos ese tipo (incluye los que no tienen tipo)
+             * @default only
+             * @enum {string}
+             */
+            document_type_mode: "only" | "exclude";
             /** Periods */
             periods?: ("2000-2020" | "2021-2023" | "2024-2026")[];
             /**
@@ -987,6 +999,13 @@ export interface components {
             incubator_number: number | "all";
             /** Language */
             language: string;
+            /** Document Type */
+            document_type: string | null;
+            /**
+             * Document Type Mode
+             * @enum {string}
+             */
+            document_type_mode: "only" | "exclude";
             /** Document Ids */
             document_ids: string[] | null;
             /** Productive Sector */
@@ -1006,6 +1025,13 @@ export interface components {
             language: string | null;
             /** Document Type */
             document_type: string | null;
+        };
+        /** ExplorerDocumentType */
+        ExplorerDocumentType: {
+            /** Name */
+            name: string;
+            /** Document Count */
+            document_count: number;
         };
         /** ExplorerEdge */
         ExplorerEdge: {
@@ -1141,6 +1167,8 @@ export interface components {
             incubators: number[];
             /** Languages */
             languages: string[];
+            /** Document Types */
+            document_types: components["schemas"]["ExplorerDocumentType"][];
             /** Documents */
             documents: components["schemas"]["ExplorerDocument"][];
             /** Documents Without Year */
@@ -1227,6 +1255,18 @@ export interface components {
              * @enum {string}
              */
             productive_sector: "all" | "Agroforestry";
+            /**
+             * Document Type
+             * @description Tipo de documento (document_type); null usa todos los tipos
+             */
+            document_type?: string | null;
+            /**
+             * Document Type Mode
+             * @description only: solo documentos de ese tipo; exclude: todos menos ese tipo (incluye los que no tienen tipo)
+             * @default only
+             * @enum {string}
+             */
+            document_type_mode: "only" | "exclude";
             /**
              * Period
              * @default all
@@ -1356,6 +1396,13 @@ export interface components {
             incubator_number: number | "all";
             /** Language */
             language: string;
+            /** Document Type */
+            document_type: string | null;
+            /**
+             * Document Type Mode
+             * @enum {string}
+             */
+            document_type_mode: "only" | "exclude";
             /** Document Ids */
             document_ids: string[] | null;
             /** Productive Sector */
@@ -2977,6 +3024,8 @@ export interface operations {
                 period?: "all" | "2000-2020" | "2021-2023" | "2024-2026";
                 incubator_number?: "all" | number;
                 language?: string;
+                document_type?: string | null;
+                document_type_mode?: "only" | "exclude";
                 document_ids?: string[] | null;
                 productive_sector?: "all" | "Agroforestry";
                 offset?: number;

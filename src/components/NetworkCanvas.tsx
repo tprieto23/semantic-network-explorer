@@ -1,6 +1,6 @@
 import { SigmaContainer, useCamera, useRegisterEvents, useSigma } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
 import type { EdgeReducer, NodeReducer } from "sigma/types";
 import { categoryColor } from "../domain/vocabulary";
@@ -61,7 +61,11 @@ function GraphController({
   onHover,
   interactive = true,
   labeled,
-}: Pick<CanvasProps, "graph" | "selection" | "onSelect" | "onHover" | "interactive"> & { labeled: Set<string> }) {
+  focus: focused,
+}: Pick<CanvasProps, "graph" | "selection" | "onSelect" | "onHover" | "interactive"> & {
+  labeled: Set<string>;
+  focus: { id: string | null };
+}) {
   const sigma = useSigma();
   const registerEvents = useRegisterEvents();
   const { gotoNode } = useCamera({ duration: 450 });
@@ -104,6 +108,7 @@ function GraphController({
 
     const selectedNode = selection?.kind === "node" ? selection.id : null;
     const focusNode = neighborsOnly && selectedNode ? selectedNode : (hovered ?? selectedNode);
+    focused.id = selectedNode;
     labeled.clear();
     if (focusNode && graph.hasNode(focusNode)) {
       const strongest = graph
@@ -122,9 +127,64 @@ function GraphController({
         sigma.setEdgesState([key], { isHighlighted: true });
       }
     }
-  }, [sigma, graph, hovered, selection, neighborsOnly, labeled]);
+  }, [sigma, graph, hovered, selection, neighborsOnly, labeled, focused]);
 
-  return null;
+  const selectedNode = selection?.kind === "node" ? selection.id : null;
+  const chips = [...new Set([selectedNode, hovered])].filter((id): id is string => !!id && graph.hasNode(id));
+  return <FocusChips graph={graph} ids={chips} />;
+}
+
+/** Margen entre el borde de la píldora y el nodo. */
+const CHIP_PADDING = 4;
+
+/**
+ * Píldora de vidrio para la entidad en foco (cursor o selección). WebGL no puede
+ * desenfocar lo que hay detrás, así que es HTML sobre el lienzo: repite el nodo y su
+ * etiqueta y sigue a la cámara en cada cuadro. No recibe el mouse: los clics llegan a Sigma.
+ */
+function FocusChips({ graph, ids }: { graph: ExplorerGraph; ids: string[] }) {
+  const sigma = useSigma();
+  const chips = useRef(new Map<string, HTMLDivElement>());
+
+  useEffect(() => {
+    const place = () => {
+      for (const [id, chip] of chips.current) {
+        const data = sigma.getNodeDisplayData(id);
+        if (!data) {
+          chip.style.visibility = "hidden";
+          continue;
+        }
+        const { x, y } = sigma.framedGraphToViewport(data);
+        const radius = sigma.scaleSize(data.size);
+        chip.style.visibility = "visible";
+        chip.style.setProperty("--dot", `${radius * 2}px`);
+        chip.style.transform = `translate(${x - radius - CHIP_PADDING - 1}px, ${y}px) translateY(-50%)`;
+      }
+    };
+    place();
+    sigma.on("afterRender", place);
+    return () => {
+      sigma.off("afterRender", place);
+    };
+  }, [sigma, ids]);
+
+  return ids.map((id) => {
+    const node = graph.getNodeAttributes(id);
+    return (
+      <div
+        key={id}
+        className="node-chip glass"
+        aria-hidden="true"
+        ref={(element) => {
+          if (element) chips.current.set(id, element);
+          else chips.current.delete(id);
+        }}
+      >
+        <span className="node-chip-dot" style={{ background: categoryColor(node.category) }} />
+        <span className="node-chip-label">{node.label}</span>
+      </div>
+    );
+  });
 }
 
 function ZoomControls() {
@@ -157,6 +217,7 @@ export function NetworkCanvas({
   const theme = useTheme();
   // Compartido entre el controlador (lo llena) y el reducer (lo lee) sin recrear Sigma.
   const [labeled] = useState(() => new Set<string>());
+  const [focus] = useState<{ id: string | null }>(() => ({ id: null }));
 
   // Opciones estables: SigmaContainer recrea la instancia solo si cambian (tema o etiquetas fijas).
   const options = useMemo(() => {
@@ -181,13 +242,24 @@ export function NetworkCanvas({
         if (graphState.hasHighlighted && !state.isHighlighted) {
           return { ...data, color: palette.faded, label: null, zIndex: 0 };
         }
-        const focused = labeled.has(_key);
+        const labeledNode = labeled.has(_key);
+        // La entidad bajo el cursor o seleccionada la dibuja FocusChips (píldora de vidrio):
+        // aquí solo se le quita la etiqueta y la caja blanca que Sigma pone por defecto.
+        const emphasized = state.isHovered || focus.id === _key;
         return {
           ...data,
-          color: categoryColor(attributes.category, theme),
+          color: categoryColor(attributes.category),
           labelColor: palette.label,
-          zIndex: focused ? 3 : state.isHighlighted ? 2 : 1,
-          labelVisibility: focused || (pinned && !graphState.hasHighlighted) ? "visible" : "auto",
+          zIndex: emphasized ? 4 : labeledNode ? 3 : state.isHighlighted ? 2 : 1,
+          labelVisibility: emphasized
+            ? "hidden"
+            : labeledNode || (pinned && !graphState.hasHighlighted)
+              ? "visible"
+              : "auto",
+          // La capa superior evita que los vecinos tapen la tarjeta y la etiqueta.
+          depth: emphasized ? "topNodes" : "nodes",
+          labelDepth: emphasized ? "topNodes" : "nodes",
+          backdropVisibility: "hidden",
         };
       }) satisfies NodeReducer<NodeAttributes, EdgeAttributes>,
       edgeReducer: ((_key, data, _attributes, state, graphState) => {
@@ -196,7 +268,7 @@ export function NetworkCanvas({
         return { ...data, color: palette.edge };
       }) satisfies EdgeReducer<NodeAttributes, EdgeAttributes>,
     };
-  }, [pinnedLabels, theme, interactive, labeled]);
+  }, [pinnedLabels, theme, interactive, labeled, focus]);
 
   return (
     <SigmaContainer graph={graph} options={options} style={{ background: "transparent" }}>
@@ -207,6 +279,7 @@ export function NetworkCanvas({
         onHover={onHover}
         interactive={interactive}
         labeled={labeled}
+        focus={focus}
       />
       {zoomControls && <ZoomControls />}
     </SigmaContainer>
