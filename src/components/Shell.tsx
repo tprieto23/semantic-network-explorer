@@ -6,8 +6,9 @@ import { useLangStore, useT } from "../i18n";
 import { useFilterStore } from "../state/filters";
 import type { Tab } from "../state/selection";
 import { useSelectionStore } from "../state/selection";
+import { Methodology } from "./Methodology";
 import { useThemeStore } from "../state/theme";
-import { EvolutionIcon, LogoIcon, MoreIcon, NetworkIcon, SearchIcon, SummaryIcon, TableIcon, ThemeIcon } from "./icons";
+import { BookIcon, EvolutionIcon, GlobeIcon, LinkIcon, LogoIcon, MoreIcon, NetworkIcon, SearchIcon, SummaryIcon, TableIcon, ThemeIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { periodDocumentCount } from "../domain/scope";
 
@@ -85,6 +86,19 @@ export function TopBar({ meta, network }: TopBarProps) {
   const theme = useThemeStore((state) => state.theme);
   const toggleTheme = useThemeStore((state) => state.toggle);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [methodOpen, setMethodOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Los filtros, la vista y la selección viajan en la URL: copiarla comparte lo que se ve.
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      window.prompt(t("top.copyFallback"), window.location.href);
+    }
+  }
   // En celular y tablet: el buscador se despliega desde un ícono e idioma, tema y ayuda van en «⋯».
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,7 +119,10 @@ export function TopBar({ meta, network }: TopBarProps) {
   const documentCount = periodDocumentCount(meta, filters, filters.period);
 
   const langSwitch = (
-    <div className="pill-group lang-group" role="group" aria-label={t("top.language")}>
+    <div className="pill-group lang-group" role="group" aria-label={t("top.language")} data-tip={t("top.language")}>
+      <span className="lang-globe" aria-hidden="true">
+        <GlobeIcon />
+      </span>
       {LANGS.map((item) => (
         <button
           key={item}
@@ -178,6 +195,16 @@ export function TopBar({ meta, network }: TopBarProps) {
       <button
         type="button"
         className="icon-btn wide-only"
+        aria-label={t("top.copyLink")}
+        data-tip={t("top.copyLink")}
+        onClick={() => void copyLink()}
+      >
+        <LinkIcon />
+      </button>
+
+      <button
+        type="button"
+        className="icon-btn wide-only"
         aria-label={t("top.help")}
         aria-expanded={helpOpen}
         onClick={() => setHelpOpen(!helpOpen)}
@@ -232,6 +259,34 @@ export function TopBar({ meta, network }: TopBarProps) {
                   {t("top.help")}
                 </span>
               </button>
+              <button
+                type="button"
+                className="menu-row menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  void copyLink();
+                }}
+              >
+                <span>
+                  <LinkIcon />
+                  {t("top.copyLink")}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="menu-row menu-item"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setMethodOpen(true);
+                }}
+              >
+                <span>
+                  <BookIcon />
+                  {t("method.title")}
+                </span>
+              </button>
             </div>
           </>
         )}
@@ -245,11 +300,29 @@ export function TopBar({ meta, network }: TopBarProps) {
               <li key={key}>{t(key)}</li>
             ))}
           </ul>
-          <button type="button" className="text-btn" style={{ marginTop: 10 }} onClick={() => setHelpOpen(false)}>
-            {t("top.gotIt")}
-          </button>
+          <div className="help-actions">
+            <button
+              type="button"
+              className="text-btn"
+              onClick={() => {
+                setHelpOpen(false);
+                setMethodOpen(true);
+              }}
+            >
+              {t("method.open")}
+            </button>
+            <button type="button" className="text-btn" onClick={() => setHelpOpen(false)}>
+              {t("top.gotIt")}
+            </button>
+          </div>
         </div>
       )}
+
+      {methodOpen && <Methodology meta={meta} onClose={() => setMethodOpen(false)} />}
+
+      <div className={`toast glass${copied ? " show" : ""}`} role="status" aria-live="polite">
+        {copied ? t("top.copied") : ""}
+      </div>
     </header>
   );
 }

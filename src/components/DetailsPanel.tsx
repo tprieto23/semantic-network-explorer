@@ -20,6 +20,7 @@ import type { Theme } from "../state/theme";
 import { useTheme } from "../state/theme";
 import { CategoryDot } from "./Legend";
 import { Loader } from "./Loader";
+import { useSwipeToClose } from "./useSwipeToClose";
 
 interface DetailsPanelProps {
   network: NetworkResponse | undefined;
@@ -30,6 +31,7 @@ interface DetailsPanelProps {
 export function DetailsPanel({ network, filters }: DetailsPanelProps) {
   const selection = useSelectionStore((state) => state.selection);
   const select = useSelectionStore((state) => state.select);
+  const swipe = useSwipeToClose(() => select(null));
   const nodesById = useMemo(() => new Map((network?.nodes ?? []).map((node) => [node.id, node])), [network]);
 
   if (!selection || !network) return null;
@@ -53,7 +55,9 @@ export function DetailsPanel({ network, filters }: DetailsPanelProps) {
     <>
       {/* Solo visible en celular, donde el detalle es una hoja sobre la red. */}
       <div className="sheet-backdrop" aria-hidden onClick={() => select(null)} />
-      {content}
+      <div className="sheet-gestures" {...swipe}>
+        {content}
+      </div>
     </>
   );
 }

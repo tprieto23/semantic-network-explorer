@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { CompareResponse, ExplorerMeta, NetworkResponse, RankingMetric } from "../api/client";
 import { useCompare, useNetwork } from "../api/queries";
 import { leaderChanges, strongestLinks } from "../domain/insights";
@@ -9,6 +10,7 @@ import { errorText, useT } from "../i18n";
 import type { Filters } from "../state/filters";
 import { COMPARED_PERIODS } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
+import { ExpandIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
 import { InfoTip } from "./InfoTip";
@@ -33,6 +35,7 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
   const second = useNetwork(filters, { period: COMPARED_PERIODS[1], enabled: ready && counts[1] > 0 });
   const third = useNetwork(filters, { period: COMPARED_PERIODS[2], enabled: ready && counts[2] > 0 });
   const queries = [first, second, third];
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   const referencePositions = useMemo<Positions>(() => {
     if (!reference.data || reference.data.nodes.length === 0) return new Map();
@@ -41,9 +44,17 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
   }, [reference.data, filters.metric, filters.edgeDisplay]);
 
   if (meta && !ready) return <NoYearsState meta={meta} counts={counts} />;
+  const expandedQuery = expanded === null ? undefined : queries[expanded];
 
   const data = compare.data;
   const changed = data ? leaderChanges(data) : 0;
+  // Lo que cambió va primero; lo que se mantiene queda compacto al final.
+  const metricOrder = data
+    ? [...METRIC_ORDER].sort((a, b) => Number(leaderHistory(data, b).changed) - Number(leaderHistory(data, a).changed))
+    : METRIC_ORDER;
+  // Períodos con muestras muy distintas: parte de los cambios puede ser efecto del tamaño.
+  const withDocs = counts.filter((count) => count > 0);
+  const uneven = withDocs.length >= 2 && Math.max(...withDocs) >= 1.5 * Math.min(...withDocs);
 
   return (
     <div className="scroll-view">
@@ -65,10 +76,15 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
             )}
           </span>
         </div>
+        {uneven && (
+          <p className="evo-note">
+            {t("evo.uneven", { list: counts.map((count) => formatInt(count, lang)).join(", ") })}
+          </p>
+        )}
         {compare.error instanceof Error && <div className="notice error">{errorText(compare.error, t)}</div>}
         <div className="leader-grid">
           {data
-            ? METRIC_ORDER.map((metric) => <LeaderCard key={metric} data={data} metric={metric} />)
+            ? metricOrder.map((metric) => <LeaderCard key={metric} data={data} metric={metric} />)
             : METRIC_ORDER.map((metric) => <div key={metric} className="leader-card ghost" style={{ height: 62 }} />)}
         </div>
       </section>
@@ -84,6 +100,16 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
                   {query.data ? t("evo.entities", { n: formatInt(query.data.stages.edge_weight.nodes, lang) }) : ""}
                   {t("common.docs", { n: counts[index] })}
                 </span>
+                <button
+                  type="button"
+                  className="round-btn expand-btn"
+                  aria-label={t("evo.expand", { period: periodLabel(period) })}
+                  data-tip={t("evo.expand", { period: periodLabel(period) })}
+                  disabled={!query.data || query.data.nodes.length === 0}
+                  onClick={() => setExpanded(index)}
+                >
+                  <ExpandIcon />
+                </button>
               </header>
               <PeriodCanvas
                 network={query.data}
@@ -135,13 +161,28 @@ export default function EvolutionView({ filters, meta }: { filters: Filters; met
         </section>
         {data && <Changes data={data} />}
       </div>
+
+      {expanded !== null && expandedQuery?.data && (
+        <PeriodModal
+          title={`${periodLabel(COMPARED_PERIODS[expanded])} · ${t("common.docs", { n: counts[expanded] })}`}
+          onClose={() => setExpanded(null)}
+        >
+          <PeriodCanvas
+            network={expandedQuery.data}
+            strongestOnly={filters.edgeDisplay === "strongest"}
+            loading={false}
+            positions={referencePositions}
+            metric={filters.metric}
+            large
+          />
+        </PeriodModal>
+      )}
     </div>
   );
 }
 
-function LeaderCard({ data, metric }: { data: CompareResponse; metric: RankingMetric }) {
-  const { t, lang } = useT();
-  const select = useSelectionStore((state) => state.select);
+/** Líder actual de una métrica y los anteriores distintos («antes: A → B»). */
+function leaderHistory(data: CompareResponse, metric: RankingMetric) {
   const leaders = data.periods.map((period) => data.central_by_period[period]?.[metric] ?? null);
   const latest = [...leaders].reverse().find((leader) => leader !== null) ?? null;
   // Líderes anteriores distintos, en orden, para mostrar la trayectoria («antes: A → B»).
@@ -151,10 +192,17 @@ function LeaderCard({ data, metric }: { data: CompareResponse; metric: RankingMe
     .filter((leader, index, list) => index === 0 || list[index - 1].id !== leader.id);
   const changed = earlier.some((leader) => leader.id !== latest?.id);
   const history = earlier.filter((leader, index) => leader.id !== latest?.id || index < earlier.length - 1);
+  return { latest, history, changed };
+}
+
+function LeaderCard({ data, metric }: { data: CompareResponse; metric: RankingMetric }) {
+  const { t, lang } = useT();
+  const select = useSelectionStore((state) => state.select);
+  const { latest, history, changed } = leaderHistory(data, metric);
   return (
     <button
       type="button"
-      className={`leader-card${changed ? " changed" : ""}`}
+      className={`leader-card${changed ? " changed" : " same"}`}
       onClick={() => latest && select({ kind: "node", id: latest.id })}
       data-tip={metricInfo(metric, lang).description}
     >
@@ -184,12 +232,15 @@ function PeriodCanvas({
   loading,
   positions,
   metric,
+  large = false,
 }: {
   network: NetworkResponse | undefined;
   strongestOnly: boolean;
   loading: boolean;
   positions: Positions;
   metric: RankingMetric;
+  /** Ampliada: más etiquetas y controles de zoom. */
+  large?: boolean;
 }) {
   const { t } = useT();
   const selection = useSelectionStore((state) => state.selection);
@@ -202,7 +253,15 @@ function PeriodCanvas({
 
   return (
     <div className="stage-canvas">
-      {graph && <NetworkCanvas graph={graph} selection={selection} onSelect={select} pinnedLabels={6} />}
+      {graph && (
+        <NetworkCanvas
+          graph={graph}
+          selection={selection}
+          onSelect={select}
+          pinnedLabels={large ? 12 : 6}
+          zoomControls={large}
+        />
+      )}
       {!graph && (
         <div className="state">
           {loading ? (
@@ -214,6 +273,37 @@ function PeriodCanvas({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Red de un período a pantalla casi completa; Escape o clic fuera la cierran. */
+function PeriodModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const { t } = useT();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="card period-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header>
+          <strong>{title}</strong>
+          <button ref={closeRef} type="button" className="round-btn" aria-label={t("common.close")} onClick={onClose}>
+            ×
+          </button>
+        </header>
+        {children}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import type { CompareResponse, NetworkResponse } from "../api/client";
+import { detectCommunities } from "../domain/communities";
 import { gainers, leader, strongestLinks } from "../domain/insights";
-import { categoryLabel, formatInt, formatMetric, metricLabel, periodShort } from "../domain/vocabulary";
+import { categoryLabel, formatInt, formatMetric, metricInfo, metricLabel, periodShort } from "../domain/vocabulary";
 import { LayoutMemory } from "../graph/buildGraph";
 import type { MessageKey } from "../i18n";
 import { errorText, useT } from "../i18n";
@@ -10,7 +11,7 @@ import { activeFilterCount, useFilterStore } from "../state/filters";
 import { useSelectionStore } from "../state/selection";
 import { useUiStore } from "../state/ui";
 import { FilterIcon, ResetIcon } from "./icons";
-import { CategoryDot, Legend } from "./Legend";
+import { CategoryDot, CommunityLegend, Legend } from "./Legend";
 import { NetworkCanvas } from "./NetworkCanvas";
 import { Loader } from "./Loader";
 
@@ -41,6 +42,15 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
     [layoutMemory, drawn, filters.metric],
   );
   const onHover = useCallback((node: string | null) => setHovered(node), []);
+  // Comunidades sobre la red completa en pantalla (no solo los links dibujados).
+  const communities = useMemo(
+    () => (network && filters.colorBy === "community" ? detectCommunities(network, filters.metric) : null),
+    [network, filters.colorBy, filters.metric],
+  );
+  const colorOf = useMemo(
+    () => (communities ? (id: string) => communities.byNode.get(id)?.color ?? "#8E948F" : undefined),
+    [communities],
+  );
   const filtersCollapsed = useUiStore((state) => state.filtersCollapsed);
   const setFiltersCollapsed = useUiStore((state) => state.setFiltersCollapsed);
   const resetFilters = useFilterStore((state) => state.reset);
@@ -73,7 +83,14 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
 
       <div className="stage-canvas">
         {graph && (
-          <NetworkCanvas graph={graph} selection={selection} onSelect={select} onHover={onHover} zoomControls />
+          <NetworkCanvas
+            graph={graph}
+            selection={selection}
+            onSelect={select}
+            onHover={onHover}
+            colorOf={colorOf}
+            zoomControls
+          />
         )}
 
         {filtersCollapsed && (
@@ -122,6 +139,8 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
           </div>
         )}
 
+        {graph && <FirstVisitGuide />}
+
         {!graph && isFetching && <LoadingState network={network} />}
         {!graph && !isFetching && showError && <ErrorState message={errorText(error as Error, t)} onRetry={onRetry} />}
         {!graph && !isFetching && !showError && network && issues.length === 0 && (
@@ -131,7 +150,7 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
 
       {network && network.nodes.length > 0 && (
         <footer className="stage-foot">
-          <Legend categories={presentCategories} />
+          {communities ? <CommunityLegend communities={communities.list} /> : <Legend categories={presentCategories} />}
           <span className="stage-counts">
             <span>
               <strong className="num">{formatInt(network.stages.shown.nodes, lang)}</strong> {t("net.entities")}
@@ -148,7 +167,13 @@ export function NetworkView({ network, compare, isFetching, error, issues, onRet
                 </>
               )}
             </span>
-            <span className="faint">{t("net.sizeIs", { metric: metricLabel(filters.metric, lang) })}</span>
+            <span className="size-legend faint" data-tip={metricInfo(filters.metric, lang).description}>
+              <svg width="26" height="14" aria-hidden="true">
+                <circle cx="4" cy="9" r="3" />
+                <circle cx="17" cy="7" r="6.5" />
+              </svg>
+              {t("net.sizeIs", { metric: metricLabel(filters.metric, lang) })}
+            </span>
           </span>
         </footer>
       )}
@@ -397,6 +422,51 @@ function EmptyState({ network, filters }: { network: NetworkResponse; filters: F
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const GUIDE_KEY = "rs-guide-seen";
+
+/** Lee el almacenamiento local sin romper la app si el navegador lo bloquea. */
+function guideSeen(): boolean {
+  try {
+    return window.localStorage.getItem(GUIDE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Guía corta que aparece la primera vez que se abre la red; después vive en el botón «?». */
+function FirstVisitGuide() {
+  const { t } = useT();
+  const [open, setOpen] = useState(() => !guideSeen());
+  if (!open) return null;
+
+  function dismiss() {
+    setOpen(false);
+    try {
+      window.localStorage.setItem(GUIDE_KEY, "1");
+    } catch {
+      // Sin almacenamiento la guía vuelve a aparecer la próxima vez; no es grave.
+    }
+  }
+
+  return (
+    <div className="guide glass" role="dialog" aria-labelledby="guide-title">
+      <strong id="guide-title">{t("guide.title")}</strong>
+      <ol>
+        <li>{t("top.help1")}</li>
+        <li>{t("top.help2")}</li>
+        <li>{t("top.help3")}</li>
+        <li>{t("top.help4")}</li>
+      </ol>
+      <div className="guide-foot">
+        <span className="faint">{t("guide.later")}</span>
+        <button type="button" className="guide-btn" onClick={dismiss} autoFocus>
+          {t("guide.ok")}
+        </button>
       </div>
     </div>
   );

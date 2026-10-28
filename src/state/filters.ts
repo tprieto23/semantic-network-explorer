@@ -17,6 +17,9 @@ export type SectorFilter = "Agroforestry" | "all";
 /** "only": solo documentos de esos tipos; "exclude": todos menos esos tipos. */
 export type DocumentTypeMode = "only" | "exclude";
 
+/** Color de los nodos: su categoría o el grupo (comunidad) al que pertenecen. */
+export type ColorBy = "category" | "community";
+
 /** Qué links se dibujan; no cambia lo que se calcula en la API. */
 export type EdgeDisplay = "strongest" | "all";
 
@@ -41,6 +44,7 @@ export interface Filters {
   metric: RankingMetric;
   topN: number;
   edgeDisplay: EdgeDisplay;
+  colorBy: ColorBy;
   /** Entidades canónicas que se quitan antes de calcular la red. */
   excludedEntityIds: string[];
 }
@@ -60,8 +64,10 @@ export const DEFAULT_FILTERS: Filters = {
   weighting: "fractional-document",
   minWeight: 0,
   metric: "pagerank",
-  topN: 150,
+  // 75 se lee sin maraña; quien quiera más mueve el control.
+  topN: 75,
   edgeDisplay: "strongest",
+  colorBy: "category",
   excludedEntityIds: [],
 };
 
@@ -120,6 +126,7 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.metric !== DEFAULT_FILTERS.metric) params.set("metric", filters.metric);
   if (filters.topN !== DEFAULT_FILTERS.topN) params.set("top", String(filters.topN));
   if (filters.edgeDisplay !== DEFAULT_FILTERS.edgeDisplay) params.set("vis", filters.edgeDisplay);
+  if (filters.colorBy !== DEFAULT_FILTERS.colorBy) params.set("color", filters.colorBy);
   if (filters.excludedEntityIds.length) params.set("excl", filters.excludedEntityIds.join(","));
   const search = params.toString();
   return search ? `?${search}` : "";
@@ -161,6 +168,7 @@ export function filtersFromSearch(search: string): Filters {
     metric: oneOf(params.get("metric"), METRICS, DEFAULT_FILTERS.metric),
     topN: positiveInt(params.get("top"), DEFAULT_FILTERS.topN, 5000),
     edgeDisplay: oneOf(params.get("vis"), ["strongest", "all"] as const, DEFAULT_FILTERS.edgeDisplay),
+    colorBy: oneOf(params.get("color"), ["category", "community"] as const, DEFAULT_FILTERS.colorBy),
     excludedEntityIds: [...new Set((params.get("excl") ?? "").split(",").filter((id) => UUID.test(id)))],
   };
 }
@@ -202,10 +210,12 @@ function countChanged(filters: Filters, keys: (keyof Filters)[]): number {
 
 /** Cuántos filtros difieren de sus valores por defecto (cada lista cuenta como uno). */
 export function activeFilterCount(filters: Filters): number {
-  // El modo del tipo de documento es parte del mismo filtro que el tipo.
+  // El modo del tipo es parte del filtro del tipo, y el color no filtra nada.
   return countChanged(
     filters,
-    (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter((key) => key !== "documentTypeMode"),
+    (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).filter(
+      (key) => key !== "documentTypeMode" && key !== "colorBy",
+    ),
   );
 }
 
@@ -236,6 +246,8 @@ export function filterIssues(filters: Filters, availableCategories: number): Mes
 interface FilterStore {
   filters: Filters;
   update: (patch: Partial<Filters>) => void;
+  /** Reemplaza todos los filtros (vistas guiadas). */
+  replace: (filters: Filters) => void;
   reset: () => void;
 }
 
@@ -244,6 +256,7 @@ const initialSearch = typeof window === "undefined" ? "" : window.location.searc
 export const useFilterStore = create<FilterStore>()((set) => ({
   filters: filtersFromSearch(initialSearch),
   update: (patch) => set((state) => ({ filters: { ...state.filters, ...patch } })),
+  replace: (filters) => set({ filters }),
   reset: () => set({ filters: DEFAULT_FILTERS }),
 }));
 

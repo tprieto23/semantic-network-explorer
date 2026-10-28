@@ -168,3 +168,44 @@ export function MoreIcon() {
     </svg>
   );
 }
+
+export function GlobeIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.3" />
+      <path d="M1.9 8h12.2M8 1.7c1.8 1.7 2.7 3.8 2.7 6.3S9.8 12.6 8 14.3M8 1.7C6.2 3.4 5.3 5.5 5.3 8s.9 4.6 2.7 6.3" />
+    </svg>
+  );
+}
+
+export function ExpandIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8.5 1.5h4v4M5.5 12.5h-4v-4M12.5 1.5 8 6M1.5 12.5 6 8" />
+    </svg>
+  );
+}
+
+export function DownloadIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 1.8v7.4M4 6.4 7 9.4l3-3M2 11.8h10" />
+    </svg>
+  );
+}
+
+export function LinkIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <path d="M6.6 9.4a2.8 2.8 0 0 0 4 0l2.2-2.2a2.8 2.8 0 0 0-4-4l-.9.9M9.4 6.6a2.8 2.8 0 0 0-4 0L3.2 8.8a2.8 2.8 0 0 0 4 4l.9-.9" />
+    </svg>
+  );
+}
+
+export function BookIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 3.6C6.6 2.6 4.6 2.3 2.3 2.6v9.8c2.3-.3 4.3 0 5.7 1 1.4-1 3.4-1.3 5.7-1V2.6c-2.3-.3-4.3 0-5.7 1Zm0 0v9.8" />
+    </svg>
+  );
+}

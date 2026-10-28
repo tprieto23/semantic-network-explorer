@@ -37,6 +37,7 @@ describe("URL serialization", () => {
       metric: "betweenness",
       topN: 80,
       edgeDisplay: "all",
+      colorBy: "community",
       excludedEntityIds: ["435eb7d8-1d47-41a9-ba5a-c6e0ac5e5184"],
     };
 
@@ -63,7 +64,7 @@ describe("API requests", () => {
     expect(request.categories).toBeNull();
     expect(request.document_ids).toBeNull();
     expect(request.category_pairs).toBeNull();
-    expect(request.top_n).toBe(150);
+    expect(request.top_n).toBe(75);
     expect(request.productive_sector).toBe("Agroforestry");
     expect(request.document_types).toBeNull();
   });

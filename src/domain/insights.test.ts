@@ -3,11 +3,13 @@ import type { CompareResponse, ExplorerEdge, ExplorerNode, NetworkResponse } fro
 import {
   gainers,
   headline,
+  isNoiseName,
   leader,
   leaderChanges,
   leadersByCategory,
   losers,
   mostConnected,
+  sameEntityName,
   strongestLinks,
   topRelations,
 } from "./insights";
@@ -136,5 +138,31 @@ describe("insights", () => {
       central_by_period: {},
     } as unknown as CompareResponse;
     expect(gainers(data)[0]).toMatchObject({ fromPeriod: "2021-2023", toPeriod: "2024-2026", delta: 6 });
+  });
+});
+
+describe("noise and duplicates", () => {
+  it("treats names with fewer than three letters as extraction noise", () => {
+    expect(["E.", "¿", "T1", "A."].every(isNoiseName)).toBe(true);
+    expect(["SAF", "Perú", "Madre de Dios"].some(isNoiseName)).toBe(false);
+  });
+
+  it("compares names ignoring case and accents", () => {
+    expect(sameEntityName("MADRE DE DIOS", "Madre de Dios")).toBe(true);
+    expect(sameEntityName("Peru", "Perú")).toBe(true);
+    expect(sameEntityName("Perú", "Brasil")).toBe(false);
+  });
+
+  it("skips duplicate-name and noisy relations", () => {
+    const network = {
+      nodes: [
+        { ...node("pm1", "LOC", 1), name: "Puerto Maldonado" },
+        { ...node("pm2", "LOC", 2), name: "Puerto Maldonado" },
+        { ...node("e", "CHAR", 3), name: "E." },
+        { ...node("saf", "PRAC", 4), name: "SAF" },
+      ],
+      edges: [edge("pm1", "pm2", 50), edge("e", "saf", 40), edge("pm1", "saf", 10)],
+    } as NetworkResponse;
+    expect(topRelations(network).map((relation) => `${relation.source.id}-${relation.target.id}`)).toEqual(["pm1-saf"]);
   });
 });

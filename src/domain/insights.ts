@@ -3,6 +3,24 @@ import type { Lang } from "../i18n";
 import { translate } from "../i18n";
 import { CATEGORY_ORDER } from "./vocabulary";
 
+/**
+ * Nombres que casi seguro son errores de extracción («E.», «¿», «T1»): con menos de tres
+ * letras no se destacan en el resumen ni en las tarjetas. Siguen en la red y en la tabla.
+ */
+export function isNoiseName(name: string): boolean {
+  return (name.match(/\p{L}/gu) ?? []).length < 3;
+}
+
+/** Forma comparable de un nombre: sin mayúsculas ni tildes. */
+function normalizedName(name: string): string {
+  return name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
+}
+
+/** Dos entidades con el mismo nombre (p. ej. «Puerto Maldonado» y «Puerto Maldonado»). */
+export function sameEntityName(a: string, b: string): boolean {
+  return normalizedName(a) === normalizedName(b);
+}
+
 /** Entidad en pantalla con mejor posición en la métrica (el rango se calcula sobre toda la red filtrada). */
 export function leader(network: NetworkResponse, metric: RankingMetric): ExplorerNode | null {
   let best: ExplorerNode | null = null;
@@ -22,6 +40,7 @@ export interface CategoryLeader {
 export function leadersByCategory(network: NetworkResponse, metric: RankingMetric): CategoryLeader[] {
   const best = new Map<string, ExplorerNode>();
   for (const node of network.nodes) {
+    if (isNoiseName(node.name)) continue;
     const current = best.get(node.category);
     if (!current || node.ranks[metric] < current.ranks[metric]) best.set(node.category, node);
   }
@@ -63,6 +82,7 @@ export function rankShifts(compare: CompareResponse): RankShift[] {
     const first = trajectory.points[trajectory.points.length - 2];
     const last = trajectory.points[trajectory.points.length - 1];
     if (!first || !last || first.rank === null || last.rank === null) continue;
+    if (isNoiseName(trajectory.name)) continue;
     shifts.push({
       id: trajectory.id,
       name: trajectory.name,
@@ -97,17 +117,22 @@ export interface Relation {
   target: ExplorerNode;
 }
 
-/** Links con más oraciones compartidas. */
+/**
+ * Links con más oraciones compartidas. Omite los pares con el mismo nombre (son una
+ * entidad duplicada, no una relación) y los que tienen un extremo con nombre de ruido.
+ */
 export function topRelations(network: NetworkResponse, limit = 6): Relation[] {
   const byId = new Map(network.nodes.map((node) => [node.id, node]));
   return [...network.edges]
     .sort((a, b) => b.sentence_count - a.sentence_count || b.weight - a.weight)
-    .slice(0, limit)
     .flatMap((edge) => {
       const source = byId.get(edge.source);
       const target = byId.get(edge.target);
-      return source && target ? [{ edge, source, target }] : [];
-    });
+      if (!source || !target) return [];
+      if (sameEntityName(source.name, target.name) || isNoiseName(source.name) || isNoiseName(target.name)) return [];
+      return [{ edge, source, target }];
+    })
+    .slice(0, limit);
 }
 
 /** Métricas cuyo líder cambia entre el primer y el último período comparados. */

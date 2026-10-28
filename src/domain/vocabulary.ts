@@ -20,6 +20,13 @@ const PALETTE: Record<CategoryCode, string> = {
   INFRA: "#8E948F",
 };
 
+/** Los diez colores de la paleta, en orden; también colorean las comunidades. */
+export function categoryPalette(): string[] {
+  return Object.entries(PALETTE)
+    .filter(([code]) => code !== "INFRA")
+    .map(([, color]) => color);
+}
+
 /** Orden de presentación de las categorías en filtros y leyendas. */
 export const CATEGORY_ORDER: CategoryCode[] = [
   "CHAR",
@@ -115,54 +122,71 @@ interface MetricInfo {
   description: string;
 }
 
+// Nombre en lenguaje claro; el término técnico va como pista («Influencia · PageRank»).
 const METRICS: Record<Lang, Record<RankingMetric, MetricInfo>> = {
   es: {
     pagerank: {
-      label: "PageRank",
-      hint: "influencia global",
-      description: "Influencia global: es alto si se conecta con entidades que a su vez son importantes.",
+      label: "Influencia",
+      hint: "PageRank",
+      description: "Influencia (PageRank): es alta si se conecta con entidades que a su vez son importantes.",
     },
-    degree: { label: "Grado", hint: "vecinos distintos", description: "Con cuántas entidades distintas aparece en la misma oración." },
+    degree: {
+      label: "Conexiones",
+      hint: "grado",
+      description: "Conexiones (grado): con cuántas entidades distintas aparece en la misma oración.",
+    },
     strength: {
-      label: "Grado ponderado",
-      hint: "coocurrencias totales",
-      description: "Suma de todas sus coocurrencias: las conexiones muchas veces repetidas pesan más.",
+      label: "Intensidad",
+      hint: "grado ponderado",
+      description: "Intensidad (grado ponderado): suma de todas sus coocurrencias; las conexiones repetidas pesan más.",
     },
     betweenness: {
-      label: "Intermediación",
-      hint: "nodo puente",
-      description: "Nodo puente: es alto si conecta grupos que de otro modo no se tocan.",
+      label: "Puente entre grupos",
+      hint: "intermediación",
+      description: "Puente entre grupos (intermediación): es alta si conecta grupos que de otro modo no se tocan.",
     },
     closeness: {
-      label: "Cercanía",
-      hint: "centro de la red",
-      description: "Qué tan al centro está: a cuántos pasos queda del resto de la red.",
+      label: "Cercanía al centro",
+      hint: "cercanía",
+      description: "Cercanía al centro: a cuántos pasos queda del resto de la red.",
     },
-    document_count: { label: "Nº documentos", hint: "recurrencia", description: "En cuántos documentos aparece al menos una vez." },
+    document_count: {
+      label: "Presencia en documentos",
+      hint: "nº de documentos",
+      description: "En cuántos documentos aparece al menos una vez.",
+    },
   },
   en: {
     pagerank: {
-      label: "PageRank",
-      hint: "global influence",
-      description: "Global influence: high if it connects with entities that are themselves important.",
+      label: "Influence",
+      hint: "PageRank",
+      description: "Influence (PageRank): high if it connects with entities that are themselves important.",
     },
-    degree: { label: "Degree", hint: "distinct neighbors", description: "How many distinct entities it appears with in the same sentence." },
+    degree: {
+      label: "Connections",
+      hint: "degree",
+      description: "Connections (degree): how many distinct entities it appears with in the same sentence.",
+    },
     strength: {
-      label: "Weighted degree",
-      hint: "total co-occurrences",
-      description: "Sum of all its co-occurrences: connections repeated many times weigh more.",
+      label: "Intensity",
+      hint: "weighted degree",
+      description: "Intensity (weighted degree): sum of all its co-occurrences; repeated connections weigh more.",
     },
     betweenness: {
-      label: "Betweenness",
-      hint: "bridge node",
-      description: "Bridge node: high if it connects groups that otherwise don't touch.",
+      label: "Bridge between groups",
+      hint: "betweenness",
+      description: "Bridge between groups (betweenness): high if it connects groups that otherwise don't touch.",
     },
     closeness: {
-      label: "Closeness",
-      hint: "network center",
-      description: "How central it is: how many steps away it is from the rest of the network.",
+      label: "Closeness to center",
+      hint: "closeness",
+      description: "Closeness to center: how many steps away it is from the rest of the network.",
     },
-    document_count: { label: "No. of documents", hint: "recurrence", description: "In how many documents it appears at least once." },
+    document_count: {
+      label: "Document presence",
+      hint: "no. of documents",
+      description: "In how many documents it appears at least once.",
+    },
   },
 };
 
@@ -205,21 +229,27 @@ export function linkModes(lang: Lang) {
 const EDGE_WEIGHTINGS: Record<Lang, Record<EdgeWeighting, { label: string; description: string }>> = {
   es: {
     "fractional-document": {
-      label: "Fraccional por documento",
-      description: "Cada oración aporta 1/(N−1) y cada documento aporta como máximo 1. Recomendado.",
+      label: "Equilibrado (recomendado)",
+      description: "Pesa más que dos entidades aparezcan juntas en oraciones cortas, y ningún documento puede dominar: cada uno aporta como máximo 1. Técnicamente: fraccional por documento.",
     },
-    fractional: { label: "Fraccional", description: "Cada oración aporta 1/(N−1) según cuántas entidades tiene." },
-    "sentence-count": { label: "Oraciones", description: "Número de oraciones donde coocurren." },
-    "document-count": { label: "Documentos", description: "Número de documentos donde coocurren." },
+    fractional: {
+      label: "Por oración, ajustado",
+      description: "Pesa más que aparezcan juntas en oraciones cortas, sin límite por documento. Técnicamente: fraccional, 1/(N−1).",
+    },
+    "sentence-count": { label: "Oraciones en común", description: "Cuántas oraciones comparten las dos entidades." },
+    "document-count": { label: "Documentos en común", description: "Cuántos documentos mencionan a las dos entidades juntas." },
   },
   en: {
     "fractional-document": {
-      label: "Fractional per document",
-      description: "Each sentence contributes 1/(N−1) and each document contributes at most 1. Recommended.",
+      label: "Balanced (recommended)",
+      description: "Appearing together in short sentences weighs more, and no document can dominate: each contributes at most 1. Technically: fractional per document.",
     },
-    fractional: { label: "Fractional", description: "Each sentence contributes 1/(N−1) depending on how many entities it has." },
-    "sentence-count": { label: "Sentences", description: "Number of sentences where they co-occur." },
-    "document-count": { label: "Documents", description: "Number of documents where they co-occur." },
+    fractional: {
+      label: "Per sentence, adjusted",
+      description: "Appearing together in short sentences weighs more, with no limit per document. Technically: fractional, 1/(N−1).",
+    },
+    "sentence-count": { label: "Shared sentences", description: "How many sentences the two entities share." },
+    "document-count": { label: "Shared documents", description: "How many documents mention both entities together." },
   },
 };
 

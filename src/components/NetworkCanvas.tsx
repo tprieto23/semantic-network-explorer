@@ -10,7 +10,7 @@ import type { Selection } from "../state/selection";
 import { useSelectionStore } from "../state/selection";
 import type { Theme } from "../state/theme";
 import { useTheme } from "../state/theme";
-import { HomeIcon } from "./icons";
+import { DownloadIcon, HomeIcon } from "./icons";
 
 interface CanvasProps {
   graph: ExplorerGraph;
@@ -22,6 +22,8 @@ interface CanvasProps {
   zoomControls?: boolean;
   /** Recibe la entidad bajo el cursor, para mostrar su tarjeta. */
   onHover?: (node: string | null) => void;
+  /** Color de cada nodo; por defecto, el de su categoría. */
+  colorOf?: (id: string, category: string) => string;
   /** Sin selección ni eventos: miniatura del resumen. */
   interactive?: boolean;
 }
@@ -36,6 +38,8 @@ interface Palette {
 
 /** Vecinos del foco que muestran etiqueta; con más, una entidad muy conectada se vuelve ilegible. */
 const LABELED_NEIGHBORS = 12;
+
+const defaultColor = (_id: string, category: string) => categoryColor(category);
 
 const PALETTES: Record<Theme, Palette> = {
   oscuro: {
@@ -62,7 +66,9 @@ function GraphController({
   interactive = true,
   labeled,
   focus: focused,
+  colorOf,
 }: Pick<CanvasProps, "graph" | "selection" | "onSelect" | "onHover" | "interactive"> & {
+  colorOf: (id: string, category: string) => string;
   labeled: Set<string>;
   focus: { id: string | null };
 }) {
@@ -131,7 +137,7 @@ function GraphController({
 
   const selectedNode = selection?.kind === "node" ? selection.id : null;
   const chips = [...new Set([selectedNode, hovered])].filter((id): id is string => !!id && graph.hasNode(id));
-  return <FocusChips graph={graph} ids={chips} />;
+  return <FocusChips graph={graph} ids={chips} colorOf={colorOf} />;
 }
 
 /** Margen entre el borde de la píldora y el nodo. */
@@ -142,7 +148,15 @@ const CHIP_PADDING = 4;
  * desenfocar lo que hay detrás, así que es HTML sobre el lienzo: repite el nodo y su
  * etiqueta y sigue a la cámara en cada cuadro. No recibe el mouse: los clics llegan a Sigma.
  */
-function FocusChips({ graph, ids }: { graph: ExplorerGraph; ids: string[] }) {
+function FocusChips({
+  graph,
+  ids,
+  colorOf,
+}: {
+  graph: ExplorerGraph;
+  ids: string[];
+  colorOf: (id: string, category: string) => string;
+}) {
   const sigma = useSigma();
   const chips = useRef(new Map<string, HTMLDivElement>());
 
@@ -180,15 +194,48 @@ function FocusChips({ graph, ids }: { graph: ExplorerGraph; ids: string[] }) {
           else chips.current.delete(id);
         }}
       >
-        <span className="node-chip-dot" style={{ background: categoryColor(node.category) }} />
+        <span className="node-chip-dot" style={{ background: colorOf(id, node.category) }} />
         <span className="node-chip-label">{node.label}</span>
       </div>
     );
   });
 }
 
+/**
+ * Descarga la red como PNG. Las capas de Sigma son varios lienzos (WebGL y 2D): se
+ * combinan justo después de dibujar, cuando el lienzo WebGL todavía tiene su contenido.
+ */
+function exportPng(sigma: ReturnType<typeof useSigma>, filename: string) {
+  const container = sigma.getContainer();
+  const { width, height } = container.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  sigma.once("afterRender", () => {
+    const output = document.createElement("canvas");
+    output.width = Math.round(width * ratio);
+    output.height = Math.round(height * ratio);
+    const context = output.getContext("2d");
+    if (!context) return;
+    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--graph").trim() || "#ffffff";
+    context.fillRect(0, 0, output.width, output.height);
+    container.querySelectorAll("canvas").forEach((layer) => {
+      context.drawImage(layer, 0, 0, output.width, output.height);
+    });
+    output.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  });
+  sigma.refresh();
+}
+
 function ZoomControls() {
   const { t } = useT();
+  const sigma = useSigma();
   const { zoomIn, zoomOut, reset } = useCamera({ duration: 300, factor: 1.5 });
   return (
     <div className="zoom" role="group" aria-label={t("net.zoom")}>
@@ -201,6 +248,14 @@ function ZoomControls() {
       <button type="button" aria-label={t("net.fit")} onClick={() => reset()}>
         <HomeIcon />
       </button>
+      <button
+        type="button"
+        aria-label={t("net.download")}
+        data-tip={t("net.download")}
+        onClick={() => exportPng(sigma, `${t("net.filename")}.png`)}
+      >
+        <DownloadIcon />
+      </button>
     </div>
   );
 }
@@ -209,7 +264,9 @@ export function NetworkCanvas({
   graph,
   selection,
   onSelect,
-  pinnedLabels = 12,
+  // Pocas etiquetas fijas: el resto las coloca Sigma sin que se pisen.
+  pinnedLabels = 8,
+  colorOf = defaultColor,
   zoomControls = false,
   onHover,
   interactive = true,
@@ -248,7 +305,7 @@ export function NetworkCanvas({
         const emphasized = state.isHovered || focus.id === _key;
         return {
           ...data,
-          color: categoryColor(attributes.category),
+          color: colorOf(_key, attributes.category),
           labelColor: palette.label,
           zIndex: emphasized ? 4 : labeledNode ? 3 : state.isHighlighted ? 2 : 1,
           labelVisibility: emphasized
@@ -268,7 +325,7 @@ export function NetworkCanvas({
         return { ...data, color: palette.edge };
       }) satisfies EdgeReducer<NodeAttributes, EdgeAttributes>,
     };
-  }, [pinnedLabels, theme, interactive, labeled, focus]);
+  }, [pinnedLabels, theme, interactive, labeled, focus, colorOf]);
 
   return (
     <SigmaContainer graph={graph} options={options} style={{ background: "transparent" }}>
@@ -280,6 +337,7 @@ export function NetworkCanvas({
         interactive={interactive}
         labeled={labeled}
         focus={focus}
+        colorOf={colorOf}
       />
       {zoomControls && <ZoomControls />}
     </SigmaContainer>

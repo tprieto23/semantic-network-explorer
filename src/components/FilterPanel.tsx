@@ -13,7 +13,8 @@ import {
 } from "../domain/vocabulary";
 import { useT } from "../i18n";
 import type { CategoryPair, Filters } from "../state/filters";
-import { activeFilterCount, advancedFilterCount, useFilterStore } from "../state/filters";
+import { DEFAULT_FILTERS, activeFilterCount, advancedFilterCount, useFilterStore } from "../state/filters";
+import { PRESETS, isPresetActive, presetFilters } from "../domain/presets";
 import { documentsInPeriod, documentsInScope } from "../domain/scope";
 import { useTheme } from "../state/theme";
 import { useUiStore } from "../state/ui";
@@ -21,6 +22,7 @@ import { ChevronIcon, FilterIcon, ResetIcon } from "./icons";
 import { CategoryDot } from "./Legend";
 import { DocumentTypeFilter } from "./DocumentTypeFilter";
 import { GlassSelect } from "./GlassSelect";
+import { useSwipeToClose } from "./useSwipeToClose";
 import { StageFunnel } from "./StageFunnel";
 
 interface FilterPanelProps {
@@ -39,6 +41,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
   const filters = useFilterStore((state) => state.filters);
   const update = useFilterStore((state) => state.update);
   const reset = useFilterStore((state) => state.reset);
+  const replace = useFilterStore((state) => state.replace);
   const theme = useTheme();
 
   const categories = useMemo(
@@ -51,6 +54,13 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
   const allCodes = categories.map((category) => category.code as CategoryCode);
   const selectedCodes: CategoryCode[] = filters.categories.length ? filters.categories : allCodes;
   const allSelected = filters.categories.length === 0;
+  // Los conteos de meta son de todo el corpus: con un filtro de alcance no corresponderían.
+  const scoped =
+    filters.language !== "all" ||
+    filters.documentTypes.length > 0 ||
+    filters.period !== "all" ||
+    filters.incubator !== "all" ||
+    filters.documentIds.length > 0;
   const active = activeFilterCount(filters);
   const advancedCount = advancedFilterCount(filters);
   const activeLabel = active === 1 ? t("filters.activeOne") : t("filters.active", { n: active });
@@ -77,6 +87,8 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
     </button>
   );
 
+  const swipe = useSwipeToClose(() => setCollapsed(true));
+
   // Cerrado, el panel no ocupa espacio: la red muestra un botón flotante para abrirlo.
   if (collapsed) return null;
 
@@ -84,7 +96,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
     <>
       {/* Solo visible en celular, donde el panel es una hoja sobre la red. */}
       <div className="sheet-backdrop" aria-hidden onClick={() => setCollapsed(true)} />
-      <aside className="card filters" aria-label={t("filters.heading")}>
+      <aside className="card filters" aria-label={t("filters.heading")} {...swipe}>
         <div className="panel-head">
           <h2>
             {t("filters.heading")}
@@ -106,6 +118,27 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
         )}
 
         <div className="filters-body">
+          <section className="group">
+            <h3 className="group-title">{t("preset.title")}</h3>
+            <div className="presets" role="group" aria-label={t("preset.title")}>
+              {PRESETS.map((preset) => {
+                const isActive = isPresetActive(preset, filters);
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className="preset"
+                    aria-pressed={isActive}
+                    data-tip={t(preset.description)}
+                    onClick={() => replace(isActive ? { ...DEFAULT_FILTERS, sector: filters.sector } : presetFilters(preset, filters))}
+                  >
+                    {t(preset.label)}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="group">
             <div className="group-head">
               <h3 className="group-title">{t("filters.categories")}</h3>
@@ -137,7 +170,7 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
                   >
                     <CategoryDot category={code} />
                     {categoryLabel(code, lang, true)}
-                    <span className="count num">{formatInt(category.entity_count, lang)}</span>
+                    {!scoped && <span className="count num">{formatInt(category.entity_count, lang)}</span>}
                   </button>
                 );
               })}
@@ -209,6 +242,28 @@ export function FilterPanel({ meta, network }: FilterPanelProps) {
               </div>
               <p className="help">
                 {filters.edgeDisplay === "strongest" ? t("filters.strongestHelp") : t("filters.allHelp")}
+              </p>
+            </div>
+            <div className="field">
+              <span className="field-label">{t("filters.colorBy")}</span>
+              <div className="segmented" role="group" aria-label={t("filters.colorBy")}>
+                <button
+                  type="button"
+                  aria-pressed={filters.colorBy === "category"}
+                  onClick={() => update({ colorBy: "category" })}
+                >
+                  {t("filters.colorCategory")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={filters.colorBy === "community"}
+                  onClick={() => update({ colorBy: "community" })}
+                >
+                  {t("filters.colorCommunity")}
+                </button>
+              </div>
+              <p className="help">
+                {filters.colorBy === "community" ? t("filters.communityHelp") : t("filters.categoryHelp")}
               </p>
             </div>
           </section>
