@@ -1605,19 +1605,20 @@ button.insight:hover {
   position: absolute;
   border-radius: 50%;
   will-change: transform, opacity;
-  animation: 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
+/* Cada animación va completa (nombre incluido): el minificador de producción convierte
+   un «animation» sin nombre en «animation: none» y el loader quedaba quieto. */
 .loader-dot.d1 {
-  animation-name: loader-d1;
+  animation: loader-d1 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-dot.d2 {
-  animation-name: loader-d2;
+  animation: loader-d2 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-dot.d3 {
-  animation-name: loader-d3;
+  animation: loader-d3 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 /* Riel a lo largo de un link (girado a su ángulo) y el pulso que lo recorre. */
@@ -1631,15 +1632,14 @@ button.insight:hover {
   position: absolute;
   inset: 0;
   will-change: transform, opacity;
-  animation: 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-run.r1 {
-  animation-name: loader-r1;
+  animation: loader-r1 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-run.r2 {
-  animation-name: loader-r2;
+  animation: loader-r2 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-spark {
@@ -1661,20 +1661,18 @@ button.insight:hover {
   background: inherit;
   opacity: 0;
   filter: blur(3px);
-  animation: inherit;
-  animation-name: none;
 }
 
 .loader-dot.d1::after {
-  animation-name: loader-h1;
+  animation: loader-h1 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-dot.d2::after {
-  animation-name: loader-h2;
+  animation: loader-h2 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .loader-dot.d3::after {
-  animation-name: loader-h3;
+  animation: loader-h3 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 @keyframes loader-d1 {
@@ -1799,19 +1797,20 @@ button.insight:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loader-dot {
+  /* Selectores con «.loader» delante para ganarle a las reglas de cada nodo. */
+  .loader .loader-dot {
     animation: none;
   }
 
-  .loader-dot::after {
+  .loader .loader-dot::after {
     animation: loader-breathe 2.4s ease-in-out infinite;
   }
 
-  .loader-dot.d2::after {
+  .loader .loader-dot.d2::after {
     animation-delay: 0.4s;
   }
 
-  .loader-dot.d3::after {
+  .loader .loader-dot.d3::after {
     animation-delay: 0.8s;
   }
 

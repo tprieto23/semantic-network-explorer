@@ -14,26 +14,27 @@
     <style>
       /* Solo para el loader de arranque (mismo diseño que src/components/Loader.tsx): nodos
          y pulsos HTML animados con transform y opacity, que el compositor mueve aunque el
-         navegador esté ocupado cargando la app. */
+         navegador esté ocupado cargando la app. Cada animación va completa (nombre
+         incluido): el minificador convierte un «animation» sin nombre en «none». */
       html, body { margin: 0; height: 100%; background: #1b1f1e; }
       @media (prefers-color-scheme: light) { html, body { background: #e6e4dd; } }
       .boot-loader { height: 100vh; display: grid; place-items: center; }
       .bm { position: relative; width: 96px; height: 96px; }
       .bm svg { position: absolute; inset: 0; }
-      .bd { position: absolute; border-radius: 50%; will-change: transform, opacity; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
-      .bd1 { left: 9px; top: 35.3px; width: 28.8px; height: 28.8px; background: #6BC8CC; animation-name: bd1; }
-      .bd2 { left: 59.3px; top: 25.3px; width: 21.6px; height: 21.6px; background: #8BCB2E; animation-name: bd2; }
-      .bd3 { left: 49.9px; top: 58.4px; width: 13.2px; height: 13.2px; background: #858DCC; animation-name: bd3; }
+      .bd { position: absolute; border-radius: 50%; will-change: transform, opacity; }
+      .bd1 { left: 9px; top: 35.3px; width: 28.8px; height: 28.8px; background: #6BC8CC; animation: bd1 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+      .bd2 { left: 59.3px; top: 25.3px; width: 21.6px; height: 21.6px; background: #8BCB2E; animation: bd2 2.4s cubic-bezier(.45,0,.55,1) infinite; }
+      .bd3 { left: 49.9px; top: 58.4px; width: 13.2px; height: 13.2px; background: #858DCC; animation: bd3 2.4s cubic-bezier(.45,0,.55,1) infinite; }
       .bt { position: absolute; height: 0; transform-origin: 0 50%; }
       .bt1 { left: 23.4px; top: 49.7px; width: 48.6px; transform: rotate(-16.22deg); }
       .bt2 { left: 70.1px; top: 36.1px; width: 31.9px; transform: rotate(115.2deg); }
-      .br { position: absolute; inset: 0; will-change: transform, opacity; animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
-      .bt1 .br { animation-name: br1; } .bt2 .br { animation-name: br2; }
+      .br { position: absolute; inset: 0; will-change: transform, opacity; }
+      .bt1 .br { animation: br1 2.4s cubic-bezier(.45,0,.55,1) infinite; } .bt2 .br { animation: br2 2.4s cubic-bezier(.45,0,.55,1) infinite; }
       .bs { position: absolute; left: 0; top: 0; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%); }
       .bt1 .bs { background: radial-gradient(circle, #fff 0 22%, #8BCB2E 45%, transparent 72%); }
       .bt2 .bs { background: radial-gradient(circle, #fff 0 22%, #858DCC 45%, transparent 72%); }
-      .bd::after { content: ""; position: absolute; inset: -22%; border-radius: 50%; background: inherit; opacity: 0; filter: blur(2px); animation: 2.4s cubic-bezier(.45,0,.55,1) infinite; }
-      .bd1::after { animation-name: bh1; } .bd2::after { animation-name: bh2; } .bd3::after { animation-name: bh3; }
+      .bd::after { content: ""; position: absolute; inset: -22%; border-radius: 50%; background: inherit; opacity: 0; filter: blur(2px); }
+      .bd1::after { animation: bh1 2.4s cubic-bezier(.45,0,.55,1) infinite; } .bd2::after { animation: bh2 2.4s cubic-bezier(.45,0,.55,1) infinite; } .bd3::after { animation: bh3 2.4s cubic-bezier(.45,0,.55,1) infinite; }
       @keyframes bd1 { 0%, 30%, 100% { transform: scale(1) } 14% { transform: scale(1.28) } }
       @keyframes bd2 { 0%, 33%, 60%, 100% { transform: scale(1) } 46% { transform: scale(1.28) } }
       @keyframes bd3 { 0%, 64%, 92%, 100% { transform: scale(1) } 77% { transform: scale(1.34) } }
